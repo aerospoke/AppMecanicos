@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { View, StyleSheet, ActivityIndicator, TouchableOpacity, Text } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 import { MaterialIcons } from '@expo/vector-icons';
 
@@ -99,7 +100,7 @@ mechanic2.bindPopup('<div class="popup-title">🔧 Taller Express</div><div clas
 </script></body></html>`;
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       {loading && (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#3b82f6" />
@@ -130,7 +131,7 @@ mechanic2.bindPopup('<div class="popup-title">🔧 Taller Express</div><div clas
       >
         <MaterialIcons name="settings" size={28} color="#667eea" />
       </TouchableOpacity>
-    </View>
+    </SafeAreaView>
   );
 }
 

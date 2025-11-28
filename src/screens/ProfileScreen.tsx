@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { signOut } from '../services/supabaseService';
 import { useAuth } from '../context/AuthContext';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -31,8 +32,9 @@ export default function ProfileScreen({ onNavigateBack }) {
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <TouchableOpacity style={styles.backBtn} onPress={onNavigateBack}>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right', 'bottom']}>
+      <ScrollView style={styles.container}>
+        <TouchableOpacity style={styles.backBtn} onPress={onNavigateBack}>
         <MaterialIcons name="arrow-back" size={24} color="#1f2937" />
       </TouchableOpacity>
       
@@ -98,10 +100,15 @@ export default function ProfileScreen({ onNavigateBack }) {
         <Text style={styles.footerText}>Versión 1.0.0</Text>
       </View>
     </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#f9fafb',
+  },
   container: {
     flex: 1,
     backgroundColor: '#f9fafb',

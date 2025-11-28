@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 
 export default function ServiceRequestScreen({ onNavigateBack }) {
@@ -40,7 +41,7 @@ export default function ServiceRequestScreen({ onNavigateBack }) {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={onNavigateBack}>
           <MaterialIcons name="arrow-back" size={24} color="#1f2937" />
@@ -102,7 +103,7 @@ export default function ServiceRequestScreen({ onNavigateBack }) {
 
         <View style={{ height: 40 }} />
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
