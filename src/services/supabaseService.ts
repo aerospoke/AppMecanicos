@@ -1,0 +1,332 @@
+import { supabase } from '../config/supabase';
+import { AuthError, PostgrestError } from '@supabase/supabase-js';
+
+/**
+ * Servicio principal de Supabase
+ * Maneja todas las operaciones de autenticación y base de datos
+ */
+
+// ========== AUTENTICACIÓN ==========
+
+/**
+ * Registrar un nuevo usuario
+ */
+export const signUp = async (email: string, password: string, userData?: any) => {
+  try {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: userData, // Metadata adicional del usuario
+      },
+    });
+
+    if (error) throw error;
+    return { data, error: null };
+  } catch (error) {
+    console.error('Error en signUp:', error);
+    return { data: null, error: error as AuthError };
+  }
+};
+
+/**
+ * Iniciar sesión
+ */
+export const signIn = async (email: string, password: string) => {
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) throw error;
+    return { data, error: null };
+  } catch (error) {
+    console.error('Error en signIn:', error);
+    return { data: null, error: error as AuthError };
+  }
+};
+
+/**
+ * Cerrar sesión
+ */
+export const signOut = async () => {
+  try {
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
+    return { error: null };
+  } catch (error) {
+    console.error('Error en signOut:', error);
+    return { error: error as AuthError };
+  }
+};
+
+/**
+ * Obtener el usuario actual
+ */
+export const getCurrentUser = async () => {
+  try {
+    const { data: { user }, error } = await supabase.auth.getUser();
+    if (error) throw error;
+    return { user, error: null };
+  } catch (error) {
+    console.error('Error al obtener usuario:', error);
+    return { user: null, error: error as AuthError };
+  }
+};
+
+/**
+ * Obtener la sesión actual
+ */
+export const getSession = async () => {
+  try {
+    const { data: { session }, error } = await supabase.auth.getSession();
+    if (error) throw error;
+    return { session, error: null };
+  } catch (error) {
+    console.error('Error al obtener sesión:', error);
+    return { session: null, error: error as AuthError };
+  }
+};
+
+/**
+ * Recuperar contraseña
+ */
+export const resetPassword = async (email: string) => {
+  try {
+    const { data, error } = await supabase.auth.resetPasswordForEmail(email);
+    if (error) throw error;
+    return { data, error: null };
+  } catch (error) {
+    console.error('Error en resetPassword:', error);
+    return { data: null, error: error as AuthError };
+  }
+};
+
+// ========== BASE DE DATOS ==========
+
+/**
+ * Obtener todos los registros de una tabla
+ */
+export const getAll = async <T>(tableName: string) => {
+  try {
+    const { data, error } = await supabase
+      .from(tableName)
+      .select('*');
+
+    if (error) throw error;
+    return { data: data as T[], error: null };
+  } catch (error) {
+    console.error(`Error al obtener datos de ${tableName}:`, error);
+    return { data: null, error: error as PostgrestError };
+  }
+};
+
+/**
+ * Obtener un registro por ID
+ */
+export const getById = async <T>(tableName: string, id: string | number) => {
+  try {
+    const { data, error } = await supabase
+      .from(tableName)
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) throw error;
+    return { data: data as T, error: null };
+  } catch (error) {
+    console.error(`Error al obtener registro de ${tableName}:`, error);
+    return { data: null, error: error as PostgrestError };
+  }
+};
+
+/**
+ * Crear un nuevo registro
+ */
+export const create = async <T>(tableName: string, newData: Partial<T>) => {
+  try {
+    const { data, error } = await supabase
+      .from(tableName)
+      .insert(newData)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return { data: data as T, error: null };
+  } catch (error) {
+    console.error(`Error al crear en ${tableName}:`, error);
+    return { data: null, error: error as PostgrestError };
+  }
+};
+
+/**
+ * Actualizar un registro
+ */
+export const update = async <T>(
+  tableName: string,
+  id: string | number,
+  updates: Partial<T>
+) => {
+  try {
+    const { data, error } = await supabase
+      .from(tableName)
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return { data: data as T, error: null };
+  } catch (error) {
+    console.error(`Error al actualizar en ${tableName}:`, error);
+    return { data: null, error: error as PostgrestError };
+  }
+};
+
+/**
+ * Eliminar un registro
+ */
+export const deleteRecord = async (tableName: string, id: string | number) => {
+  try {
+    const { error } = await supabase
+      .from(tableName)
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+    return { error: null };
+  } catch (error) {
+    console.error(`Error al eliminar en ${tableName}:`, error);
+    return { error: error as PostgrestError };
+  }
+};
+
+/**
+ * Búsqueda con filtros personalizados
+ */
+export const query = async <T>(
+  tableName: string,
+  column: string,
+  operator: string,
+  value: any
+) => {
+  try {
+    const { data, error } = await supabase
+      .from(tableName)
+      .select('*')
+      .filter(column, operator, value);
+
+    if (error) throw error;
+    return { data: data as T[], error: null };
+  } catch (error) {
+    console.error(`Error en query de ${tableName}:`, error);
+    return { data: null, error: error as PostgrestError };
+  }
+};
+
+// ========== STORAGE (Archivos) ==========
+
+/**
+ * Subir un archivo
+ */
+export const uploadFile = async (
+  bucket: string,
+  path: string,
+  file: File | Blob
+) => {
+  try {
+    const { data, error } = await supabase.storage
+      .from(bucket)
+      .upload(path, file);
+
+    if (error) throw error;
+    return { data, error: null };
+  } catch (error) {
+    console.error('Error al subir archivo:', error);
+    return { data: null, error };
+  }
+};
+
+/**
+ * Obtener URL pública de un archivo
+ */
+export const getPublicUrl = (bucket: string, path: string) => {
+  const { data } = supabase.storage
+    .from(bucket)
+    .getPublicUrl(path);
+
+  return data.publicUrl;
+};
+
+/**
+ * Eliminar un archivo
+ */
+export const deleteFile = async (bucket: string, paths: string[]) => {
+  try {
+    const { data, error } = await supabase.storage
+      .from(bucket)
+      .remove(paths);
+
+    if (error) throw error;
+    return { data, error: null };
+  } catch (error) {
+    console.error('Error al eliminar archivo:', error);
+    return { data: null, error };
+  }
+};
+
+// ========== REALTIME (Suscripciones) ==========
+
+/**
+ * Suscribirse a cambios en una tabla
+ */
+export const subscribeToTable = (
+  tableName: string,
+  callback: (payload: any) => void
+) => {
+  const subscription = supabase
+    .channel(`${tableName}_changes`)
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: tableName },
+      callback
+    )
+    .subscribe();
+
+  return subscription;
+};
+
+/**
+ * Cancelar suscripción
+ */
+export const unsubscribe = async (subscription: any) => {
+  await supabase.removeChannel(subscription);
+};
+
+export default {
+  // Auth
+  signUp,
+  signIn,
+  signOut,
+  getCurrentUser,
+  getSession,
+  resetPassword,
+  
+  // Database
+  getAll,
+  getById,
+  create,
+  update,
+  deleteRecord,
+  query,
+  
+  // Storage
+  uploadFile,
+  getPublicUrl,
+  deleteFile,
+  
+  // Realtime
+  subscribeToTable,
+  unsubscribe,
+};
