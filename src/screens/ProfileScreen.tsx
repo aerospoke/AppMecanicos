@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView } from 'react-native';
 import { signOut } from '../services/supabaseService';
 import { useAuth } from '../context/AuthContext';
+import { MaterialIcons } from '@expo/vector-icons';
 
 export default function ProfileScreen({ onNavigateBack }) {
   const { user } = useAuth();
@@ -32,7 +33,7 @@ export default function ProfileScreen({ onNavigateBack }) {
   return (
     <ScrollView style={styles.container}>
       <TouchableOpacity style={styles.backBtn} onPress={onNavigateBack}>
-        <Text style={styles.backIcon}>←</Text>
+        <MaterialIcons name="arrow-back" size={24} color="#1f2937" />
       </TouchableOpacity>
       
       <View style={styles.header}>
@@ -121,10 +122,6 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 6,
     zIndex: 10,
-  },
-  backIcon: {
-    fontSize: 24,
-    fontWeight: 'bold',
   },
   header: {
     alignItems: 'center',

@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { View, StyleSheet, ActivityIndicator, TouchableOpacity, Text } from 'react-native';
 import { WebView } from 'react-native-webview';
+import { MaterialIcons } from '@expo/vector-icons';
 
 export default function HomeScreen({ onNavigateToProfile, onNavigateToServiceRequest }) {
   const [loading, setLoading] = useState(true);
@@ -87,11 +88,14 @@ userMarker.bindPopup('<div class="popup-title">📍 Tu Ubicación</div><div clas
 }).openPopup();
 
 const mechanic1 = L.marker([4.7210, -74.0621], { icon: mechanicIcon }).addTo(map);
-mechanic1.bindPopup('<div class="popup-title">🔧 Latta</div><div class="popup-detail">⭐⭐⭐⭐⭐ 4.8/5<br>📍 1.2 km • Disponible ahora<br></div>', {
+mechanic1.bindPopup('<div class="popup-title">🔧 Taller Premium</div><div class="popup-detail">⭐⭐⭐⭐⭐ 4.8/5<br>📍 1.2 km • Disponible ahora</div>', {
   className: 'mechanic-popup'
 });
 
-
+const mechanic2 = L.marker([4.7010, -74.0821], { icon: mechanicIcon }).addTo(map);
+mechanic2.bindPopup('<div class="popup-title">🔧 Taller Express</div><div class="popup-detail">⭐⭐⭐⭐ 4.5/5<br>📍 0.8 km • Disponible ahora</div>', {
+  className: 'mechanic-popup'
+});
 </script></body></html>`;
 
   return (
@@ -115,7 +119,8 @@ mechanic1.bindPopup('<div class="popup-title">🔧 Latta</div><div class="popup-
           style={styles.locationBtn}
           onPress={handleRequestAssistance}
         >
-          <Text style={styles.btnText}> Solicitar un mecánico a domicilio</Text>
+          <MaterialIcons name="build" size={20} color="#fff" style={{ marginRight: 8 }} />
+          <Text style={styles.btnText}>Solicitar Mecánico</Text>
         </TouchableOpacity>
       </View>
 
@@ -123,7 +128,7 @@ mechanic1.bindPopup('<div class="popup-title">🔧 Latta</div><div class="popup-
         style={styles.settingsBtn}
         onPress={onNavigateToProfile}
       >
-        <Text style={styles.settingsIcon}>⚙️</Text>
+        <MaterialIcons name="settings" size={28} color="#667eea" />
       </TouchableOpacity>
     </View>
   );
@@ -158,6 +163,8 @@ const styles = StyleSheet.create({
     elevation: 8,
     borderWidth: 2,
     borderColor: 'rgba(255,255,255,0.3)',
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   btnText: {
     color: '#fff',
@@ -167,12 +174,12 @@ const styles = StyleSheet.create({
   },
   settingsBtn: {
     position: 'absolute',
-    top: 45,
+    top: 50,
     right: 20,
     backgroundColor: '#fff',
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
@@ -180,8 +187,5 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 6,
-  },
-  settingsIcon: {
-    fontSize: 24,
   },
 });

@@ -1,24 +1,25 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 
 export default function ServiceRequestScreen({ onNavigateBack }) {
   const [selectedService, setSelectedService] = useState(null);
 
   const emergencyServices = [
-    { id: 1, icon: '🔋', name: 'Batería descargada', description: 'Arranque con cables o cambio de batería', type: 'emergency' },
-    { id: 2, icon: '🛞', name: 'Llanta ponchada', description: 'Cambio de neumático en el lugar', type: 'emergency' },
-    { id: 3, icon: '⚠️', name: 'No arranca el motor', description: 'Diagnóstico y reparación básica', type: 'emergency' },
-    { id: 4, icon: '🔥', name: 'Sobrecalentamiento', description: 'Revisión del sistema de enfriamiento', type: 'emergency' },
-    { id: 5, icon: '🔓', name: 'Llaves dentro del auto', description: 'Apertura de vehículo sin daños', type: 'emergency' },
+    { id: 1, icon: 'battery-charging-full', name: 'Batería descargada', description: 'Arranque con cables o cambio de batería', type: 'emergency' },
+    { id: 2, icon: 'build-circle', name: 'Llanta ponchada', description: 'Cambio de neumático en el lugar', type: 'emergency' },
+    { id: 3, icon: 'warning', name: 'No arranca el motor', description: 'Diagnóstico y reparación básica', type: 'emergency' },
+    { id: 4, icon: 'local-fire-department', name: 'Sobrecalentamiento', description: 'Revisión del sistema de enfriamiento', type: 'emergency' },
+    { id: 5, icon: 'lock-open', name: 'Llaves dentro del auto', description: 'Apertura de vehículo sin daños', type: 'emergency' },
   ];
 
   const detailServices = [
-    { id: 6, icon: '⚙️', name: 'Kit de distribución', description: 'Cambio completo de kit de distribución', type: 'detail' },
-    { id: 7, icon: '🛢️', name: 'Cambio de aceite', description: 'Aceite y filtro de motor', type: 'detail' },
-    { id: 8, icon: '🔧', name: 'Frenos', description: 'Cambio de pastillas o discos de freno', type: 'detail' },
-    { id: 9, icon: '🔩', name: 'Suspensión', description: 'Reparación de amortiguadores', type: 'detail' },
-    { id: 10, icon: '💨', name: 'Aire acondicionado', description: 'Recarga y reparación de A/C', type: 'detail' },
-    { id: 11, icon: '🎯', name: 'Alineación y balanceo', description: 'Servicio completo de alineación', type: 'detail' },
+    { id: 6, icon: 'settings', name: 'Kit de distribución', description: 'Cambio completo de kit de distribución', type: 'detail' },
+    { id: 7, icon: 'water-drop', name: 'Cambio de aceite', description: 'Aceite y filtro de motor', type: 'detail' },
+    { id: 8, icon: 'build', name: 'Frenos', description: 'Cambio de pastillas o discos de freno', type: 'detail' },
+    { id: 9, icon: 'swap-vert', name: 'Suspensión', description: 'Reparación de amortiguadores', type: 'detail' },
+    { id: 10, icon: 'ac-unit', name: 'Aire acondicionado', description: 'Recarga y reparación de A/C', type: 'detail' },
+    { id: 11, icon: 'navigation', name: 'Alineación y balanceo', description: 'Servicio completo de alineación', type: 'detail' },
   ];
 
   const handleSelectService = (service) => {
@@ -42,7 +43,7 @@ export default function ServiceRequestScreen({ onNavigateBack }) {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={onNavigateBack}>
-          <Text style={styles.backIcon}>←</Text>
+          <MaterialIcons name="arrow-back" size={24} color="#1f2937" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>🔧 Solicitar Servicio</Text>
         <View style={{ width: 50 }} />
@@ -62,12 +63,14 @@ export default function ServiceRequestScreen({ onNavigateBack }) {
               ]}
               onPress={() => handleSelectService(service)}
             >
-              <Text style={styles.serviceIcon}>{service.icon}</Text>
+              <View style={styles.serviceIconContainer}>
+                <MaterialIcons name={service.icon as any} size={28} color="#667eea" />
+              </View>
               <View style={styles.serviceInfo}>
                 <Text style={styles.serviceName}>{service.name}</Text>
                 <Text style={styles.serviceDescription}>{service.description}</Text>
               </View>
-              <Text style={styles.arrowIcon}>›</Text>
+              <MaterialIcons name="chevron-right" size={32} color="#9ca3af" />
             </TouchableOpacity>
           ))}
         </View>
@@ -85,12 +88,14 @@ export default function ServiceRequestScreen({ onNavigateBack }) {
               ]}
               onPress={() => handleSelectService(service)}
             >
-              <Text style={styles.serviceIcon}>{service.icon}</Text>
+              <View style={styles.serviceIconContainer}>
+                <MaterialIcons name={service.icon as any} size={28} color="#667eea" />
+              </View>
               <View style={styles.serviceInfo}>
                 <Text style={styles.serviceName}>{service.name}</Text>
                 <Text style={styles.serviceDescription}>{service.description}</Text>
               </View>
-              <Text style={styles.arrowIcon}>›</Text>
+              <MaterialIcons name="chevron-right" size={32} color="#9ca3af" />
             </TouchableOpacity>
           ))}
         </View>
@@ -124,11 +129,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9fafb',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  backIcon: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1f2937',
   },
   headerTitle: {
     fontSize: 20,
@@ -168,8 +168,13 @@ const styles = StyleSheet.create({
     borderColor: '#667eea',
     backgroundColor: '#f0f4ff',
   },
-  serviceIcon: {
-    fontSize: 32,
+  serviceIconContainer: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#f0f4ff',
+    justifyContent: 'center',
+    alignItems: 'center',
     marginRight: 16,
   },
   serviceInfo: {
@@ -184,10 +189,5 @@ const styles = StyleSheet.create({
   serviceDescription: {
     fontSize: 13,
     color: '#6b7280',
-  },
-  arrowIcon: {
-    fontSize: 32,
-    color: '#9ca3af',
-    fontWeight: '300',
   },
 });
