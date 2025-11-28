@@ -4,7 +4,7 @@ import { ActivityIndicator, View } from 'react-native';
 
 // Screens
 import LoginScreen from './src/screens/LoginScreen';
-import HomeScreen from './src/screens/HomeScreen';
+import MainScreen from './src/screens/MainScreen';
 
 function AppContent() {
   const { user, loading } = useAuth();
@@ -17,7 +17,7 @@ function AppContent() {
     );
   }
 
-  return user ? <HomeScreen /> : <LoginScreen />;
+  return user ? <MainScreen /> : <LoginScreen />;
 }
 
 export default function App() {
