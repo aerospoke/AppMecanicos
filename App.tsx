@@ -1,13 +1,15 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { ActivityIndicator, View } from 'react-native';
 
 // Screens
 import LoginScreen from './src/screens/LoginScreen';
-import MainScreen from './src/screens/MainScreen';
+import HomeScreenNew from './src/screens/HomeScreenNew';
+import ProfileScreen from './src/screens/ProfileScreen';
 
 function AppContent() {
   const { user, loading } = useAuth();
+  const [currentScreen, setCurrentScreen] = useState('home');
 
   if (loading) {
     return (
@@ -17,7 +19,11 @@ function AppContent() {
     );
   }
 
-  return user ? <MainScreen /> : <LoginScreen />;
+  if (!user) return <LoginScreen />;
+
+  return currentScreen === 'home' 
+    ? <HomeScreenNew onNavigateToProfile={() => setCurrentScreen('profile')} />
+    : <ProfileScreen onNavigateBack={() => setCurrentScreen('home')} />;
 }
 
 export default function App() {

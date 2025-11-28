@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { View, StyleSheet, ActivityIndicator, TouchableOpacity, Text, Alert } from 'react-native';
 import { WebView } from 'react-native-webview';
 
-export default function HomeScreen() {
+export default function HomeScreen({ onNavigateToProfile }) {
   const [loading, setLoading] = useState(true);
   const webViewRef = useRef(null);
 
@@ -122,9 +122,16 @@ mechanic1.bindPopup('<div class="popup-title">🔧 Latta</div><div class="popup-
           style={styles.locationBtn}
           onPress={handleRequestAssistance}
         >
-          <Text style={styles.btnText}>Solicitar Un Mecánico</Text>
+          <Text style={styles.btnText}> Solicitar un mecánico a domicilio</Text>
         </TouchableOpacity>
       </View>
+
+      <TouchableOpacity 
+        style={styles.settingsBtn}
+        onPress={onNavigateToProfile}
+      >
+        <Text style={styles.settingsIcon}>⚙️</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -164,5 +171,24 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     fontSize: 16,
     letterSpacing: 0.5,
+  },
+  settingsBtn: {
+    position: 'absolute',
+    top: 45,
+    right: 20,
+    backgroundColor: '#fff',
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  settingsIcon: {
+    fontSize: 24,
   },
 });

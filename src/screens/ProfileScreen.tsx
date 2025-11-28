@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView } from 'rea
 import { signOut } from '../services/supabaseService';
 import { useAuth } from '../context/AuthContext';
 
-export default function ProfileScreen() {
+export default function ProfileScreen({ onNavigateBack }) {
   const { user } = useAuth();
 
   const handleLogout = async () => {
@@ -31,6 +31,10 @@ export default function ProfileScreen() {
 
   return (
     <ScrollView style={styles.container}>
+      <TouchableOpacity style={styles.backBtn} onPress={onNavigateBack}>
+        <Text style={styles.backIcon}>←</Text>
+      </TouchableOpacity>
+      
       <View style={styles.header}>
         <Text style={styles.logo}>👤</Text>
         <Text style={styles.title}>Mi Perfil</Text>
@@ -100,6 +104,27 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f9fafb',
+  },
+  backBtn: {
+    position: 'absolute',
+    top: 50,
+    left: 20,
+    backgroundColor: '#fff',
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 6,
+    zIndex: 10,
+  },
+  backIcon: {
+    fontSize: 24,
+    fontWeight: 'bold',
   },
   header: {
     alignItems: 'center',
