@@ -6,6 +6,7 @@ import { ActivityIndicator, View } from 'react-native';
 import LoginScreen from './src/screens/LoginScreen';
 import HomeScreenNew from './src/screens/HomeScreenNew';
 import ProfileScreen from './src/screens/ProfileScreen';
+import ServiceRequestScreen from './src/screens/ServiceRequestScreen';
 
 function AppContent() {
   const { user, loading } = useAuth();
@@ -21,9 +22,20 @@ function AppContent() {
 
   if (!user) return <LoginScreen />;
 
-  return currentScreen === 'home' 
-    ? <HomeScreenNew onNavigateToProfile={() => setCurrentScreen('profile')} />
-    : <ProfileScreen onNavigateBack={() => setCurrentScreen('home')} />;
+  if (currentScreen === 'service') {
+    return <ServiceRequestScreen onNavigateBack={() => setCurrentScreen('home')} />;
+  }
+
+  if (currentScreen === 'profile') {
+    return <ProfileScreen onNavigateBack={() => setCurrentScreen('home')} />;
+  }
+
+  return (
+    <HomeScreenNew 
+      onNavigateToProfile={() => setCurrentScreen('profile')}
+      onNavigateToServiceRequest={() => setCurrentScreen('service')}
+    />
+  );
 }
 
 export default function App() {

@@ -1,20 +1,13 @@
 import React, { useState, useRef } from 'react';
-import { View, StyleSheet, ActivityIndicator, TouchableOpacity, Text, Alert } from 'react-native';
+import { View, StyleSheet, ActivityIndicator, TouchableOpacity, Text } from 'react-native';
 import { WebView } from 'react-native-webview';
 
-export default function HomeScreen({ onNavigateToProfile }) {
+export default function HomeScreen({ onNavigateToProfile, onNavigateToServiceRequest }) {
   const [loading, setLoading] = useState(true);
   const webViewRef = useRef(null);
 
   const handleRequestAssistance = () => {
-    Alert.alert(
-      '🔧 Solicitar Asistencia',
-      '¿Deseas solicitar un mecánico a tu ubicación?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Confirmar', onPress: () => Alert.alert('✅', 'Solicitud enviada') }
-      ]
-    );
+    onNavigateToServiceRequest();
   };
 
   const htmlContent = `<!DOCTYPE html>
