@@ -230,6 +230,13 @@ service${index}.bindPopup(\`
     opacity: 0.95;
     line-height: 1.6;
   }
+  
+  /* Estilo para la ruta */
+  .route-line {
+    color: #7aea66ff;
+    weight: 8;
+    opacity: 0.7;
+  }
 </style>
 </head><body><div id="map"></div>
 <script>
@@ -258,6 +265,35 @@ userMarker.bindPopup('<div class="popup-title">📍 Tu Ubicación</div><div clas
 ` : ''}
 
 ${serviceMarkers}
+
+${currentLocation && serviceRequests.length > 0 ? `
+// Dibujar rutas desde la ubicación actual a cada servicio
+${serviceRequests.map((service, index) => `
+fetch('https://router.project-osrm.org/route/v1/driving/${centerLng},${centerLat};${service.longitude},${service.latitude}?overview=full&geometries=geojson')
+  .then(response => response.json())
+  .then(data => {
+    if (data.routes && data.routes[0]) {
+      const route = data.routes[0];
+      const coordinates = route.geometry.coordinates.map(coord => [coord[1], coord[0]]);
+      
+      L.polyline(coordinates, {
+        color: '#ffd500ff',
+        weight: 8,
+        opacity: 0.7,
+        lineJoin: 'round',
+        lineCap: 'round'
+      }).addTo(map);
+      
+      // Agregar marcador con distancia y tiempo
+      const distance = (route.distance / 1000).toFixed(1);
+      const duration = Math.round(route.duration / 60);
+      
+      console.log('Ruta ${index}: ' + distance + ' km, ' + duration + ' min');
+    }
+  })
+  .catch(err => console.error('Error obteniendo ruta:', err));
+`).join('\n')}
+` : ''}
 
 ${serviceRequests.length > 0 ? `
 // Ajustar vista para mostrar todos los marcadores
