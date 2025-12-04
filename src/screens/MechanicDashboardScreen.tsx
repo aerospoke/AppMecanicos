@@ -13,6 +13,7 @@ export default function MechanicDashboardScreen({ onNavigateBack }) {
   const { userProfile, user } = useAuth();
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState('pending'); // 'pending', 'in_progress', 'completed'
 
   useEffect(() => {
     loadRequests();
@@ -26,7 +27,7 @@ export default function MechanicDashboardScreen({ onNavigateBack }) {
     if (!error && data) {
       // Ordenar por más recientes primero
       const sorted = data.sort((a, b) => 
-        new Date(b.created_at) - new Date(a.created_at)
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       );
       setRequests(sorted);
     } else if (error) {
@@ -62,6 +63,23 @@ export default function MechanicDashboardScreen({ onNavigateBack }) {
     }
   };
 
+  // Filtrar solicitudes según la pestaña activa
+  const getFilteredRequests = () => {
+    switch (activeTab) {
+      case 'pending':
+        return requests.filter(r => r.status === 'pending');
+      case 'in_progress':
+        return requests.filter(r => r.status === 'in_progress');
+      case 'completed':
+        // Solo mostrar los completados por el mecánico actual
+        return requests.filter(r => 
+          r.status === 'completed' && r.mechanic_id === user?.id
+        );
+      default:
+        return requests;
+    }
+  };
+
   const getStatusColor = (status) => {
     switch (status) {
       case 'pending': return '#f59e0b';
@@ -81,6 +99,8 @@ export default function MechanicDashboardScreen({ onNavigateBack }) {
       default: return status;
     }
   };
+
+  const filteredRequests = getFilteredRequests();
 
   return (
     <RoleGuard allowedRoles={['mecanico', 'admin']}>
@@ -110,15 +130,93 @@ export default function MechanicDashboardScreen({ onNavigateBack }) {
             </Text>
           </View>
 
-          <Text style={styles.sectionTitle}>📋 Solicitudes de Servicio</Text>
+          {/* Pestañas de filtrado */}
+          <View style={styles.tabsContainer}>
+            <TouchableOpacity 
+              style={[styles.tab, activeTab === 'pending' && styles.tabActive]}
+              onPress={() => setActiveTab('pending')}
+            >
+              <View style={styles.tabContent}>
+                <MaterialIcons 
+                  name="pending-actions" 
+                  size={18} 
+                  color={activeTab === 'pending' ? '#667eea' : '#9ca3af'} 
+                />
+                <Text style={[styles.tabText, activeTab === 'pending' && styles.tabTextActive]}>
+                  Pendientes
+                </Text>
+              </View>
+              <View style={[styles.badge, activeTab === 'pending' && styles.badgeActive]}>
+                <Text style={[styles.badgeText, activeTab === 'pending' && styles.badgeTextActive]}>
+                  {requests.filter(r => r.status === 'pending').length}
+                </Text>
+              </View>
+            </TouchableOpacity>
 
-          {requests.length === 0 ? (
+            <TouchableOpacity 
+              style={[styles.tab, activeTab === 'in_progress' && styles.tabActive]}
+              onPress={() => setActiveTab('in_progress')}
+            >
+              <View style={styles.tabContent}>
+                <MaterialIcons 
+                  name="engineering" 
+                  size={18} 
+                  color={activeTab === 'in_progress' ? '#667eea' : '#9ca3af'} 
+                />
+                <Text style={[styles.tabText, activeTab === 'in_progress' && styles.tabTextActive]}>
+                  En Proceso
+                </Text>
+              </View>
+              <View style={[styles.badge, activeTab === 'in_progress' && styles.badgeActive]}>
+                <Text style={[styles.badgeText, activeTab === 'in_progress' && styles.badgeTextActive]}>
+                  {requests.filter(r => r.status === 'in_progress').length}
+                </Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.tab, activeTab === 'completed' && styles.tabActive]}
+              onPress={() => setActiveTab('completed')}
+            >
+              <View style={styles.tabContent}>
+                <MaterialIcons 
+                  name="done-all" 
+                  size={18} 
+                  color={activeTab === 'completed' ? '#667eea' : '#9ca3af'} 
+                />
+                <Text style={[styles.tabText, activeTab === 'completed' && styles.tabTextActive]}>
+                  Completados
+                </Text>
+              </View>
+              <View style={[styles.badge, activeTab === 'completed' && styles.badgeActive]}>
+                <Text style={[styles.badgeText, activeTab === 'completed' && styles.badgeTextActive]}>
+                  {requests.filter(r => r.status === 'completed' && r.mechanic_id === user?.id).length}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+
+          <Text style={styles.sectionTitle}>
+            {activeTab === 'pending' && '📋 Solicitudes Pendientes'}
+            {activeTab === 'in_progress' && '🔧 Servicios en Proceso'}
+            {activeTab === 'completed' && '✅ Servicios que Completé'}
+          </Text>
+
+          {filteredRequests.length === 0 ? (
             <View style={styles.emptyState}>
-              <Text style={styles.emptyIcon}>📭</Text>
-              <Text style={styles.emptyText}>No hay solicitudes</Text>
+              <Text style={styles.emptyIcon}>
+                {activeTab === 'pending' && '📭'}
+                {activeTab === 'in_progress' && '🔧'}
+                {activeTab === 'completed' && '✅'}
+              </Text>
+              <Text style={styles.emptyText}>
+                {activeTab === 'pending' && 'No hay solicitudes pendientes'}
+                {activeTab === 'in_progress' && 'No tienes servicios en proceso'}
+                {activeTab === 'completed' && 'Aún no has completado ningún servicio'}
+              </Text>
             </View>
           ) : (
-            requests.map((request) => (
+            filteredRequests.map((request) => (
               <View key={request.id} style={styles.requestCard}>
                 <View style={styles.requestHeader}>
                   <View style={styles.serviceIconContainer}>
@@ -156,7 +254,16 @@ export default function MechanicDashboardScreen({ onNavigateBack }) {
                     </Text>
                   </View>
 
-                  {request.mechanic_name && (
+                  {activeTab === 'completed' && request.completed_at && (
+                    <View style={styles.detailRow}>
+                      <MaterialIcons name="check-circle" size={16} color="#10b981" />
+                      <Text style={[styles.detailText, { color: '#10b981' }]}>
+                        Completado: {new Date(request.completed_at).toLocaleString('es-ES')}
+                      </Text>
+                    </View>
+                  )}
+
+                  {request.mechanic_name && activeTab !== 'completed' && (
                     <View style={styles.detailRow}>
                       <MaterialIcons name="build" size={16} color="#10b981" />
                       <Text style={[styles.detailText, { color: '#10b981', fontWeight: '600' }]}>
@@ -165,11 +272,13 @@ export default function MechanicDashboardScreen({ onNavigateBack }) {
                     </View>
                   )}
 
-                  <View style={[styles.statusBadge, { backgroundColor: getStatusColor(request.status) + '20' }]}>
-                    <Text style={[styles.statusText, { color: getStatusColor(request.status) }]}>
-                      {getStatusText(request.status)}
-                    </Text>
-                  </View>
+                  {activeTab !== 'completed' && (
+                    <View style={[styles.statusBadge, { backgroundColor: getStatusColor(request.status) + '20' }]}>
+                      <Text style={[styles.statusText, { color: getStatusColor(request.status) }]}>
+                        {getStatusText(request.status)}
+                      </Text>
+                    </View>
+                  )}
                 </View>
 
                 {request.status === 'pending' && (
@@ -280,6 +389,73 @@ const styles = StyleSheet.create({
   welcomeSubtitle: {
     fontSize: 14,
     color: '#f0f4ff',
+  },
+  tabsContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 16,
+    marginBottom: 16,
+    paddingHorizontal: 4,
+  },
+  tab: {
+    flex: 1,
+    flexDirection: 'column',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#e5e7eb',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  tabActive: {
+    backgroundColor: '#f0f4ff',
+    borderColor: '#667eea',
+    shadowColor: '#667eea',
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  tabContent: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 8,
+  },
+  tabText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#9ca3af',
+    textAlign: 'center',
+  },
+  tabTextActive: {
+    color: '#667eea',
+    fontWeight: '700',
+  },
+  badge: {
+    backgroundColor: '#f3f4f6',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    minWidth: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badgeActive: {
+    backgroundColor: '#667eea',
+  },
+  badgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#6b7280',
+  },
+  badgeTextActive: {
+    color: '#fff',
   },
   sectionTitle: {
     fontSize: 18,
