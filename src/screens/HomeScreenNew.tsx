@@ -192,7 +192,7 @@ map.fitBounds(bounds, { padding: [50, 50] });
       
       <View style={styles.locationButtons}>
         {/* Botón para clientes: Solicitar Mecánico */}
-        {userRole === 'cliente' && (
+        {userRole === 'usuario' && (
           <TouchableOpacity 
             style={styles.locationBtn}
             onPress={handleRequestAssistance}

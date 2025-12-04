@@ -2,7 +2,7 @@
  * Utilidades para manejo de roles
  */
 
-export type UserRole = 'cliente' | 'mecanico' | 'admin';
+export type UserRole = 'usuario' | 'mecanico' | 'admin';
 
 /**
  * Verifica si el usuario tiene el rol requerido
@@ -35,7 +35,7 @@ export const isMecanico = (userRole: UserRole | null): boolean => {
  * Verifica si el usuario es cliente
  */
 export const isCliente = (userRole: UserRole | null): boolean => {
-  return userRole === 'cliente';
+  return userRole === 'usuario';
 };
 
 /**
@@ -43,7 +43,7 @@ export const isCliente = (userRole: UserRole | null): boolean => {
  */
 export const getRoleName = (role: UserRole): string => {
   const roleNames = {
-    cliente: 'Cliente',
+    usuario: 'Cliente',
     mecanico: 'Mecánico',
     admin: 'Administrador',
   };
@@ -55,7 +55,7 @@ export const getRoleName = (role: UserRole): string => {
  */
 export const getRoleEmoji = (role: UserRole): string => {
   const roleEmojis = {
-    cliente: '👤',
+    usuario: '👤',
     mecanico: '🔧',
     admin: '⚡',
   };

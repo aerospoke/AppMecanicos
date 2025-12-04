@@ -22,6 +22,25 @@ export const signUp = async (email: string, password: string, userData?: any) =>
     });
 
     if (error) throw error;
+
+    // Crear perfil automáticamente en la tabla profiles
+    if (data.user) {
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert({
+          id: data.user.id,
+          email: email,
+          nombre: userData?.nombre || '',
+          telefono: userData?.telefono || '',
+          rol: 'usuario', // Rol por defecto (usuario, mecanico, admin)
+        });
+
+      if (profileError) {
+        console.error('Error creando perfil:', profileError);
+        // No lanzamos error aquí para no bloquear el registro
+      }
+    }
+
     return { data, error: null };
   } catch (error) {
     console.error('Error en signUp:', error);

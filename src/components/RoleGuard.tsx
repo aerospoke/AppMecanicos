@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 
 interface RoleGuardProps {
   children: React.ReactNode;
-  allowedRoles: ('cliente' | 'mecanico' | 'admin')[];
+  allowedRoles: ('usuario' | 'mecanico' | 'admin')[];
   fallback?: React.ReactNode;
 }
 

@@ -8,7 +8,7 @@ interface UserProfile {
   email: string;
   nombre?: string;
   telefono?: string;
-  rol: 'cliente' | 'mecanico' | 'admin';
+  rol: 'usuario' | 'mecanico' | 'admin';
   created_at?: string;
 }
 
@@ -16,7 +16,7 @@ interface AuthContextType {
   session: Session | null;
   user: User | null;
   userProfile: UserProfile | null;
-  userRole: 'cliente' | 'mecanico' | 'admin' | null;
+  userRole: 'usuario' | 'mecanico' | 'admin' | null;
   loading: boolean;
   refreshProfile: () => Promise<void>;
 }
@@ -36,14 +36,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [userRole, setUserRole] = useState<'cliente' | 'mecanico' | 'admin' | null>(null);
+  const [userRole, setUserRole] = useState<'usuario' | 'mecanico' | 'admin' | null>(null);
   const [loading, setLoading] = useState(true);
 
   const loadUserProfile = async (userId: string) => {
     const { data, error } = await getUserProfile(userId);
     if (!error && data) {
       setUserProfile(data as UserProfile);
-      setUserRole(data.rol as 'cliente' | 'mecanico' | 'admin');
+      setUserRole(data.rol as 'usuario' | 'mecanico' | 'admin');
     } else {
       // Si no existe perfil, asignar rol por defecto 'cliente'
       setUserRole('cliente');
