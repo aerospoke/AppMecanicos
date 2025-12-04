@@ -1,21 +1,92 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { View, StyleSheet, ActivityIndicator, TouchableOpacity, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 import { MaterialIcons } from '@expo/vector-icons';
+import * as Location from 'expo-location';
 import { useAuth } from '../context/AuthContext';
 import { isMecanico } from '../utils/roleUtils';
+import { supabase } from '../config/supabase';
 
 export default function HomeScreen({ onNavigateToProfile, onNavigateToServiceRequest, onNavigateToMechanicDashboard }) {
   const { userRole } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [currentLocation, setCurrentLocation] = useState(null);
+  const [serviceRequests, setServiceRequests] = useState([]);
   const webViewRef = useRef(null);
+
+  useEffect(() => {
+    loadLocationAndServices();
+  }, []);
+
+  const loadLocationAndServices = async () => {
+    try {
+      // Obtener ubicación actual
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status === 'granted') {
+        const location = await Location.getCurrentPositionAsync({});
+        setCurrentLocation({
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+        });
+      }
+
+      // Obtener solicitudes de servicio activas (pending e in_progress)
+      const { data, error } = await supabase
+        .from('service_requests')
+        .select('*')
+        .in('status', ['pending', 'in_progress'])
+        .not('latitude', 'is', null)
+        .not('longitude', 'is', null);
+
+      if (!error && data) {
+        setServiceRequests(data);
+      }
+    } catch (error) {
+      console.error('Error loading data:', error);
+    }
+  };
 
   const handleRequestAssistance = () => {
     onNavigateToServiceRequest();
   };
 
-  const htmlContent = `<!DOCTYPE html>
+  // Generar HTML dinámico con las ubicaciones reales
+  const generateMapHTML = () => {
+    const centerLat = currentLocation?.latitude || 4.7110;
+    const centerLng = currentLocation?.longitude || -74.0721;
+
+    // Generar código JavaScript para los marcadores de servicios
+    const serviceMarkers = serviceRequests.map((service, index) => {
+      const statusColor = service.status === 'pending' ? '#f59e0b' : '#10b981';
+      const statusText = service.status === 'pending' ? 'Pendiente' : 'En Progreso';
+      const serviceEmoji = service.service_icon || '🔧';
+      
+      return `
+const service${index} = L.marker([${service.latitude}, ${service.longitude}], { 
+  icon: L.divIcon({
+    className: 'custom-icon',
+    html: '<div style="background: linear-gradient(135deg, ${statusColor} 0%, ${statusColor}dd 100%); width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.3); border: 3px solid white; font-size: 18px;">${serviceEmoji}</div>',
+    iconSize: [38, 38],
+    iconAnchor: [19, 19]
+  })
+}).addTo(map);
+
+service${index}.bindPopup(\`
+  <div class="popup-title">${serviceEmoji} ${service.service_name}</div>
+  <div class="popup-detail">
+    👤 ${service.user_email}<br>
+    📝 ${service.service_description || 'Sin descripción'}<br>
+    📊 Estado: ${statusText}
+    ${service.mechanic_name ? '<br>🔧 Atendido por: ' + service.mechanic_name : ''}
+  </div>
+\`, {
+  className: 'service-popup'
+});
+`;
+    }).join('\n');
+
+    return `<!DOCTYPE html>
 <html><head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -39,16 +110,16 @@ export default function HomeScreen({ onNavigateToProfile, onNavigateToServiceReq
     background: #764ba2;
   }
   .user-popup .leaflet-popup-content-wrapper {
-    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
   }
   .user-popup .leaflet-popup-tip {
-    background: #f5576c;
+    background: #2563eb;
   }
-  .mechanic-popup .leaflet-popup-content-wrapper {
-    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  .service-popup .leaflet-popup-content-wrapper {
+    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
   }
-  .mechanic-popup .leaflet-popup-tip {
-    background: #00f2fe;
+  .service-popup .leaflet-popup-tip {
+    background: #7c3aed;
   }
   .popup-title {
     font-weight: 700;
@@ -58,6 +129,7 @@ export default function HomeScreen({ onNavigateToProfile, onNavigateToServiceReq
   .popup-detail {
     font-size: 13px;
     opacity: 0.95;
+    line-height: 1.6;
   }
 </style>
 </head><body><div id="map"></div>
@@ -65,42 +137,41 @@ export default function HomeScreen({ onNavigateToProfile, onNavigateToServiceReq
 const map = L.map('map', {
   zoomControl: true,
   attributionControl: true
-}).setView([4.7110, -74.0721], 13);
+}).setView([${centerLat}, ${centerLng}], 13);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '© OpenStreetMap',
   maxZoom: 19
 }).addTo(map);
 
+${currentLocation ? `
 const userIcon = L.divIcon({
   className: 'custom-icon',
-  html: '<div style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(245,87,108,0.5); border: 3px solid white; font-size: 20px;">📍</div>',
+  html: '<div style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(59,130,246,0.5); border: 3px solid white; font-size: 20px;">📍</div>',
   iconSize: [40, 40],
   iconAnchor: [20, 20]
 });
 
-const mechanicIcon = L.divIcon({
-  className: 'custom-icon',
-  html: '<div style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(79,172,254,0.5); border: 3px solid white; font-size: 18px;">🔧</div>',
-  iconSize: [38, 38],
-  iconAnchor: [19, 19]
-});
-
-const userMarker = L.marker([4.7110, -74.0721], { icon: userIcon }).addTo(map);
-userMarker.bindPopup('<div class="popup-title">📍 Tu Ubicación</div><div class="popup-detail">Bogotá, Colombia</div>', {
+const userMarker = L.marker([${centerLat}, ${centerLng}], { icon: userIcon }).addTo(map);
+userMarker.bindPopup('<div class="popup-title">📍 Tu Ubicación</div><div class="popup-detail">Ubicación actual</div>', {
   className: 'user-popup'
 }).openPopup();
+` : ''}
 
-const mechanic1 = L.marker([4.7210, -74.0621], { icon: mechanicIcon }).addTo(map);
-mechanic1.bindPopup('<div class="popup-title">🔧 Taller Premium</div><div class="popup-detail">⭐⭐⭐⭐⭐ 4.8/5<br>📍 1.2 km • Disponible ahora</div>', {
-  className: 'mechanic-popup'
-});
+${serviceMarkers}
 
-const mechanic2 = L.marker([4.7010, -74.0821], { icon: mechanicIcon }).addTo(map);
-mechanic2.bindPopup('<div class="popup-title">🔧 Taller Express</div><div class="popup-detail">⭐⭐⭐⭐ 4.5/5<br>📍 0.8 km • Disponible ahora</div>', {
-  className: 'mechanic-popup'
-});
+${serviceRequests.length > 0 ? `
+// Ajustar vista para mostrar todos los marcadores
+const bounds = L.latLngBounds([
+  ${currentLocation ? `[${centerLat}, ${centerLng}],` : ''}
+  ${serviceRequests.map(s => `[${s.latitude}, ${s.longitude}]`).join(',\n  ')}
+]);
+map.fitBounds(bounds, { padding: [50, 50] });
+` : ''}
 </script></body></html>`;
+  };
+
+  const htmlContent = generateMapHTML();
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
@@ -116,6 +187,7 @@ mechanic2.bindPopup('<div class="popup-title">🔧 Taller Express</div><div clas
         style={styles.webview}
         javaScriptEnabled={true}
         onLoadEnd={() => setLoading(false)}
+        key={serviceRequests.length} // Forzar recarga cuando cambien los servicios
       />
       
       <View style={styles.locationButtons}>

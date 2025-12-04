@@ -8,10 +8,12 @@ import HomeScreenNew from './src/screens/HomeScreenNew';
 import ProfileScreen from './src/screens/ProfileScreen';
 import ServiceRequestScreen from './src/screens/ServiceRequestScreen';
 import MechanicDashboardScreen from './src/screens/MechanicDashboardScreen';
+import ServiceMapScreen from './src/screens/ServiceMapScreen';
 
 function AppContent() {
   const { user, loading } = useAuth();
   const [currentScreen, setCurrentScreen] = useState('home');
+  const [selectedService, setSelectedService] = useState(null);
 
   if (loading) {
     return (
@@ -32,7 +34,24 @@ function AppContent() {
   }
 
   if (currentScreen === 'mechanic-dashboard') {
-    return <MechanicDashboardScreen onNavigateBack={() => setCurrentScreen('home')} />;
+    return (
+      <MechanicDashboardScreen 
+        onNavigateBack={() => setCurrentScreen('home')} 
+        onNavigateToMap={(service) => {
+          setSelectedService(service);
+          setCurrentScreen('service-map');
+        }}
+      />
+    );
+  }
+
+  if (currentScreen === 'service-map' && selectedService) {
+    return (
+      <ServiceMapScreen 
+        onNavigateBack={() => setCurrentScreen('mechanic-dashboard')} 
+        serviceRequest={selectedService}
+      />
+    );
   }
 
   return (

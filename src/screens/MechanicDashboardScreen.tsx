@@ -9,7 +9,7 @@ import { getAll, update } from '../services/supabaseService';
 /**
  * Pantalla para mecánicos - Ver y gestionar solicitudes
  */
-export default function MechanicDashboardScreen({ onNavigateBack }) {
+export default function MechanicDashboardScreen({ onNavigateBack, onNavigateToMap }) {
   const { userProfile, user } = useAuth();
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -283,34 +283,63 @@ export default function MechanicDashboardScreen({ onNavigateBack }) {
 
                 {request.status === 'pending' && (
                   <View style={styles.actionButtons}>
-                    <TouchableOpacity 
-                      style={[styles.actionBtn, styles.acceptBtn]}
-                      onPress={() => handleUpdateStatus(request.id, 'in_progress')}
-                    >
-                      <MaterialIcons name="check-circle" size={18} color="#fff" />
-                      <Text style={styles.actionBtnText}>Atender</Text>
-                    </TouchableOpacity>
+                    {request.latitude && request.longitude ? (
+                      <TouchableOpacity 
+                        style={[styles.actionBtn, styles.mapBtn]}
+                        onPress={() => onNavigateToMap(request)}
+                      >
+                        <MaterialIcons name="map" size={18} color="#fff" />
+                        <Text style={styles.actionBtnText}>Ver Ubicación en Mapa</Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <View style={styles.noLocationNote}>
+                        <MaterialIcons name="location-off" size={16} color="#ef4444" />
+                        <Text style={styles.noLocationText}>Sin ubicación GPS</Text>
+                      </View>
+                    )}
 
-                    <TouchableOpacity 
-                      style={[styles.actionBtn, styles.rejectBtn]}
-                      onPress={() => handleUpdateStatus(request.id, 'cancelled')}
-                    >
-                      <MaterialIcons name="cancel" size={18} color="#fff" />
-                      <Text style={styles.actionBtnText}>Rechazar</Text>
-                    </TouchableOpacity>
+                    <View style={styles.quickActions}>
+                      <TouchableOpacity 
+                        style={[styles.quickActionBtn, styles.acceptBtn]}
+                        onPress={() => handleUpdateStatus(request.id, 'in_progress')}
+                      >
+                        <MaterialIcons name="check-circle" size={18} color="#fff" />
+                        <Text style={styles.quickActionText}>Atender</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity 
+                        style={[styles.quickActionBtn, styles.rejectBtn]}
+                        onPress={() => handleUpdateStatus(request.id, 'cancelled')}
+                      >
+                        <MaterialIcons name="cancel" size={18} color="#fff" />
+                        <Text style={styles.quickActionText}>Rechazar</Text>
+                      </TouchableOpacity>
+                    </View>
                   </View>
                 )}
 
                 {request.status === 'in_progress' && (
                   <>
                     {request.mechanic_id === user?.id ? (
-                      <TouchableOpacity 
-                        style={[styles.actionBtn, styles.completeBtn]}
-                        onPress={() => handleUpdateStatus(request.id, 'completed')}
-                      >
-                        <MaterialIcons name="done-all" size={18} color="#fff" />
-                        <Text style={styles.actionBtnText}>Marcar Completado</Text>
-                      </TouchableOpacity>
+                      <View style={styles.actionButtons}>
+                        {request.latitude && request.longitude && (
+                          <TouchableOpacity 
+                            style={[styles.actionBtn, styles.mapBtn]}
+                            onPress={() => onNavigateToMap(request)}
+                          >
+                            <MaterialIcons name="map" size={18} color="#fff" />
+                            <Text style={styles.actionBtnText}>Ver Ubicación en Mapa</Text>
+                          </TouchableOpacity>
+                        )}
+                        
+                        <TouchableOpacity 
+                          style={[styles.actionBtn, styles.completeBtn]}
+                          onPress={() => handleUpdateStatus(request.id, 'completed')}
+                        >
+                          <MaterialIcons name="done-all" size={18} color="#fff" />
+                          <Text style={styles.actionBtnText}>Marcar Completado</Text>
+                        </TouchableOpacity>
+                      </View>
                     ) : (
                       <View style={styles.assignedNote}>
                         <MaterialIcons name="info" size={16} color="#667eea" />
@@ -539,9 +568,53 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   actionButtons: {
+    gap: 10,
+    marginTop: 12,
+  },
+  quickActions: {
     flexDirection: 'row',
-    gap: 12,
-    marginTop: 16,
+    gap: 10,
+  },
+  quickActionBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    gap: 6,
+  },
+  quickActionText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  mapBtn: {
+    backgroundColor: '#3b82f6',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    gap: 6,
+  },
+  noLocationNote: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: '#fef2f2',
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#fecaca',
+  },
+  noLocationText: {
+    fontSize: 12,
+    color: '#991b1b',
+    fontWeight: '500',
   },
   actionBtn: {
     flex: 1,
