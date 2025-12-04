@@ -66,22 +66,33 @@ export default function HomeScreen({ onNavigateToProfile, onNavigateToServiceReq
 const service${index} = L.marker([${service.latitude}, ${service.longitude}], { 
   icon: L.divIcon({
     className: 'custom-icon',
-    html: '<div style="background: linear-gradient(135deg, ${statusColor} 0%, ${statusColor}dd 100%); width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.3); border: 3px solid white; font-size: 18px;">${serviceEmoji}</div>',
+    html: '<div style="background: white; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.3); border: 3px solid ${statusColor}; font-size: 18px;">👤</div>',
     iconSize: [38, 38],
     iconAnchor: [19, 19]
   })
 }).addTo(map);
 
 service${index}.bindPopup(\`
-  <div class="popup-title">${serviceEmoji} ${service.service_name}</div>
-  <div class="popup-detail">
-    👤 ${service.user_email}<br>
-    📝 ${service.service_description || 'Sin descripción'}<br>
-    📊 Estado: ${statusText}
-    ${service.mechanic_name ? '<br>🔧 Atendido por: ' + service.mechanic_name : ''}
+  <div class="user-popup-content">
+    <div class="user-popup-header">
+      <div class="user-avatar">👤</div>
+      <div class="user-info">
+        <div class="user-name">${service.user_email}</div>
+        <div class="status-badge status-${service.status}">${statusText}</div>
+      </div>
+    </div>
+    <div class="service-info">
+      <div class="info-row">
+        <span class="info-label">Servicio:</span>
+        <span class="info-value">${serviceEmoji} ${service.service_name}</span>
+      </div>
+      ${service.service_description ? '<div class="info-row"><span class="info-label">Descripción:</span><span class="info-value">' + service.service_description + '</span></div>' : ''}
+      ${service.mechanic_name ? '<div class="info-row"><span class="info-label">Mecánico:</span><span class="info-value">🔧 ' + service.mechanic_name + '</span></div>' : ''}
+    </div>
   </div>
 \`, {
-  className: 'service-popup'
+  className: 'white-popup',
+  maxWidth: 280
 });
 `;
     }).join('\n');
@@ -94,32 +105,121 @@ service${index}.bindPopup(\`
 <style>
   body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
   #map { height: 100vh; width: 100vw; }
-  .custom-popup .leaflet-popup-content-wrapper {
+  
+  /* Modal blanco para usuarios */
+  .white-popup .leaflet-popup-content-wrapper {
+    background: white;
+    border-radius: 16px;
+    padding: 0;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+  }
+  .white-popup .leaflet-popup-content {
+    margin: 0;
+    font-size: 14px;
+  }
+  .white-popup .leaflet-popup-tip {
+    background: white;
+  }
+  
+  .user-popup-content {
+    padding: 16px;
+  }
+  
+  .user-popup-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  
+  .user-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    margin-right: 12px;
+    flex-shrink: 0;
+  }
+  
+  .user-info {
+    flex: 1;
+    min-width: 0;
+  }
+  
+  .user-name {
+    font-weight: 700;
+    font-size: 15px;
+    color: #1f2937;
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  .status-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  
+  .status-pending {
+    background: #fef3c7;
+    color: #d97706;
+  }
+  
+  .status-in_progress {
+    background: #d1fae5;
+    color: #059669;
+  }
+  
+  .service-info {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .info-row {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  
+  .info-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  
+  .info-value {
+    font-size: 14px;
+    color: #1f2937;
+    font-weight: 500;
+  }
+  
+  /* Popup de ubicación actual */
+  .user-popup .leaflet-popup-content-wrapper {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
     color: white;
     border-radius: 16px;
     padding: 4px;
     box-shadow: 0 8px 24px rgba(0,0,0,0.3);
   }
-  .custom-popup .leaflet-popup-content {
+  .user-popup .leaflet-popup-content {
     margin: 12px 16px;
     font-size: 14px;
     line-height: 1.5;
   }
-  .custom-popup .leaflet-popup-tip {
-    background: #764ba2;
-  }
-  .user-popup .leaflet-popup-content-wrapper {
-    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-  }
   .user-popup .leaflet-popup-tip {
     background: #2563eb;
-  }
-  .service-popup .leaflet-popup-content-wrapper {
-    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
-  }
-  .service-popup .leaflet-popup-tip {
-    background: #7c3aed;
   }
   .popup-title {
     font-weight: 700;
