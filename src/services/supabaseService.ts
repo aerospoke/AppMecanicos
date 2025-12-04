@@ -225,6 +225,49 @@ export const query = async <T>(
   }
 };
 
+// ========== SOLICITUDES DE SERVICIO ==========
+
+/**
+ * Crear una solicitud de servicio
+ * Tabla: service_requests
+ */
+export const createServiceRequest = async (serviceData: {
+  service_name: string;
+  service_description: string;
+  service_type: 'emergency' | 'detail';
+  service_icon?: string;
+}) => {
+  try {
+    // Obtener el usuario actual
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    
+    if (userError) throw userError;
+    if (!user) throw new Error('Usuario no autenticado');
+
+    // Crear el registro de solicitud
+    const { data, error } = await supabase
+      .from('service_requests')
+      .insert({
+        user_id: user.id,
+        user_email: user.email,
+        service_name: serviceData.service_name,
+        service_description: serviceData.service_description,
+        service_type: serviceData.service_type,
+        service_icon: serviceData.service_icon,
+        status: 'pending',
+        created_at: new Date().toISOString(),
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return { data, error: null };
+  } catch (error) {
+    console.error('Error al crear solicitud de servicio:', error);
+    return { data: null, error: error as PostgrestError };
+  }
+};
+
 // ========== STORAGE (Archivos) ==========
 
 /**
@@ -320,6 +363,9 @@ export default {
   update,
   deleteRecord,
   query,
+  
+  // Service Requests
+  createServiceRequest,
   
   // Storage
   uploadFile,

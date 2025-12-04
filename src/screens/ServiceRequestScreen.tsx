@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
+import { createServiceRequest } from '../services/supabaseService';
 
 export default function ServiceRequestScreen({ onNavigateBack }) {
   const [selectedService, setSelectedService] = useState(null);
@@ -23,8 +24,27 @@ export default function ServiceRequestScreen({ onNavigateBack }) {
     { id: 11, icon: 'navigation', name: 'Alineación y balanceo', description: 'Servicio completo de alineación', type: 'detail' },
   ];
 
-  const handleSelectService = (service) => {
+  const handleSelectService = async (service) => {
     setSelectedService(service);
+    
+    // Registrar la solicitud en Supabase
+    const { data, error } = await createServiceRequest({
+      service_name: service.name,
+      service_description: service.description,
+      service_type: service.type,
+      service_icon: service.icon,
+    });
+
+    if (error) {
+      Alert.alert(
+        '❌ Error',
+        'No se pudo registrar la solicitud. Por favor, intenta de nuevo.',
+        [{ text: 'Aceptar' }]
+      );
+      setSelectedService(null);
+      return;
+    }
+
     Alert.alert(
       '✅ Solicitud Enviada',
       `${service.name}\n\nUn mecánico se pondrá en contacto contigo pronto.`,
