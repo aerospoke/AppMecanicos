@@ -236,6 +236,8 @@ export const createServiceRequest = async (serviceData: {
   service_description: string;
   service_type: 'emergency' | 'detail';
   service_icon?: string;
+  latitude?: number;
+  longitude?: number;
 }) => {
   try {
     // Obtener el usuario actual
@@ -254,6 +256,8 @@ export const createServiceRequest = async (serviceData: {
         service_description: serviceData.service_description,
         service_type: serviceData.service_type,
         service_icon: serviceData.service_icon,
+        latitude: serviceData.latitude,
+        longitude: serviceData.longitude,
         status: 'pending',
         created_at: new Date().toISOString(),
       })

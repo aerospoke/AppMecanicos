@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
+import * as Location from 'expo-location';
 import { createServiceRequest } from '../services/supabaseService';
 
 export default function ServiceRequestScreen({ onNavigateBack }) {
@@ -27,12 +28,41 @@ export default function ServiceRequestScreen({ onNavigateBack }) {
   const handleSelectService = async (service) => {
     setSelectedService(service);
     
+    let latitude = null;
+    let longitude = null;
+
+    try {
+      // Solicitar permisos de ubicación
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      
+      if (status !== 'granted') {
+        Alert.alert(
+          '⚠️ Permisos de Ubicación',
+          'Se necesitan permisos de ubicación para enviar tu posición al mecánico.',
+          [{ text: 'Aceptar' }]
+        );
+      } else {
+        // Obtener la ubicación actual
+        const location = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.High,
+        });
+        
+        latitude = location.coords.latitude;
+        longitude = location.coords.longitude;
+      }
+    } catch (error) {
+      console.log('Error al obtener ubicación:', error);
+      // Continuar sin ubicación
+    }
+    
     // Registrar la solicitud en Supabase
     const { data, error } = await createServiceRequest({
       service_name: service.name,
       service_description: service.description,
       service_type: service.type,
       service_icon: service.icon,
+      latitude,
+      longitude,
     });
 
     if (error) {
@@ -45,9 +75,13 @@ export default function ServiceRequestScreen({ onNavigateBack }) {
       return;
     }
 
+    const locationMsg = (latitude && longitude) 
+      ? `\n\nUbicación registrada: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`
+      : '';
+
     Alert.alert(
       '✅ Solicitud Enviada',
-      `${service.name}\n\nUn mecánico se pondrá en contacto contigo pronto.`,
+      `${service.name}\n\nUn mecánico se pondrá en contacto contigo pronto.${locationMsg}`,
       [
         {
           text: 'Aceptar',
