@@ -4,9 +4,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { signOut } from '../services/supabaseService';
 import { useAuth } from '../context/AuthContext';
 import { MaterialIcons } from '@expo/vector-icons';
+import { getRoleName, getRoleEmoji } from '../utils/roleUtils';
 
 export default function ProfileScreen({ onNavigateBack }) {
-  const { user } = useAuth();
+  const { user, userProfile, userRole } = useAuth();
 
   const handleLogout = async () => {
     Alert.alert(
@@ -55,16 +56,30 @@ export default function ProfileScreen({ onNavigateBack }) {
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Nombre:</Text>
               <Text style={styles.infoValue}>
-                {user.user_metadata?.nombre || 'No especificado'}
+                {userProfile?.nombre || user.user_metadata?.nombre || 'No especificado'}
               </Text>
             </View>
             
-            {user.user_metadata?.telefono && (
+            {(userProfile?.telefono || user.user_metadata?.telefono) && (
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Teléfono:</Text>
-                <Text style={styles.infoValue}>{user.user_metadata.telefono}</Text>
+                <Text style={styles.infoValue}>
+                  {userProfile?.telefono || user.user_metadata.telefono}
+                </Text>
               </View>
             )}
+
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Rol:</Text>
+              <View style={styles.roleContainer}>
+                <Text style={styles.roleEmoji}>
+                  {userRole ? getRoleEmoji(userRole) : '❓'}
+                </Text>
+                <Text style={styles.roleValue}>
+                  {userRole ? getRoleName(userRole) : 'No asignado'}
+                </Text>
+              </View>
+            </View>
 
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Usuario desde:</Text>
@@ -179,6 +194,23 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#1f2937',
     fontWeight: '600',
+  },
+  roleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  roleEmoji: {
+    fontSize: 18,
+  },
+  roleValue: {
+    fontSize: 14,
+    color: '#1f2937',
+    fontWeight: '700',
+    backgroundColor: '#f0f4ff',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
   },
   actionButton: {
     backgroundColor: '#f3f4f6',

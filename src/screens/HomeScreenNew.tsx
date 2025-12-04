@@ -3,8 +3,11 @@ import { View, StyleSheet, ActivityIndicator, TouchableOpacity, Text } from 'rea
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useAuth } from '../context/AuthContext';
+import { isMecanico } from '../utils/roleUtils';
 
-export default function HomeScreen({ onNavigateToProfile, onNavigateToServiceRequest }) {
+export default function HomeScreen({ onNavigateToProfile, onNavigateToServiceRequest, onNavigateToMechanicDashboard }) {
+  const { userRole } = useAuth();
   const [loading, setLoading] = useState(true);
   const webViewRef = useRef(null);
 
@@ -116,13 +119,27 @@ mechanic2.bindPopup('<div class="popup-title">🔧 Taller Express</div><div clas
       />
       
       <View style={styles.locationButtons}>
-        <TouchableOpacity 
-          style={styles.locationBtn}
-          onPress={handleRequestAssistance}
-        >
-          <MaterialIcons name="build" size={20} color="#fff" style={{ marginRight: 8 }} />
-          <Text style={styles.btnText}>Solicitar Mecánico</Text>
-        </TouchableOpacity>
+        {/* Botón para clientes: Solicitar Mecánico */}
+        {userRole === 'cliente' && (
+          <TouchableOpacity 
+            style={styles.locationBtn}
+            onPress={handleRequestAssistance}
+          >
+            <MaterialIcons name="build" size={20} color="#fff" style={{ marginRight: 8 }} />
+            <Text style={styles.btnText}>Solicitar Mecánico</Text>
+          </TouchableOpacity>
+        )}
+
+        {/* Botón para mecánicos y admins: Ver Solicitudes */}
+        {isMecanico(userRole) && (
+          <TouchableOpacity 
+            style={[styles.locationBtn, styles.mechanicBtn]}
+            onPress={onNavigateToMechanicDashboard}
+          >
+            <MaterialIcons name="assignment" size={20} color="#fff" style={{ marginRight: 8 }} />
+            <Text style={styles.btnText}>Ver Solicitudes</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       <TouchableOpacity 
@@ -166,6 +183,10 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.3)',
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  mechanicBtn: {
+    backgroundColor: '#10b981',
+    shadowColor: '#10b981',
   },
   btnText: {
     color: '#fff',

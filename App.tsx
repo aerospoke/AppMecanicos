@@ -7,6 +7,7 @@ import LoginScreen from './src/screens/LoginScreen';
 import HomeScreenNew from './src/screens/HomeScreenNew';
 import ProfileScreen from './src/screens/ProfileScreen';
 import ServiceRequestScreen from './src/screens/ServiceRequestScreen';
+import MechanicDashboardScreen from './src/screens/MechanicDashboardScreen';
 
 function AppContent() {
   const { user, loading } = useAuth();
@@ -30,10 +31,15 @@ function AppContent() {
     return <ProfileScreen onNavigateBack={() => setCurrentScreen('home')} />;
   }
 
+  if (currentScreen === 'mechanic-dashboard') {
+    return <MechanicDashboardScreen onNavigateBack={() => setCurrentScreen('home')} />;
+  }
+
   return (
     <HomeScreenNew 
       onNavigateToProfile={() => setCurrentScreen('profile')}
       onNavigateToServiceRequest={() => setCurrentScreen('service')}
+      onNavigateToMechanicDashboard={() => setCurrentScreen('mechanic-dashboard')}
     />
   );
 }
