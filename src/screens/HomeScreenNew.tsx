@@ -31,11 +31,11 @@ export default function HomeScreen({ onNavigateToProfile, onNavigateToServiceReq
         });
       }
 
-      // Obtener solicitudes de servicio activas (pending e in_progress)
+      // Obtener solo solicitudes de servicio en progreso
       const { data, error } = await supabase
         .from('service_requests')
         .select('*')
-        .in('status', ['pending', 'in_progress'])
+        .eq('status', 'in_progress')
         .not('latitude', 'is', null)
         .not('longitude', 'is', null);
 
@@ -58,9 +58,8 @@ export default function HomeScreen({ onNavigateToProfile, onNavigateToServiceReq
 
     // Generar código JavaScript para los marcadores de servicios
     const serviceMarkers = serviceRequests.map((service, index) => {
-      const statusColor = service.status === 'pending' ? '#f59e0b' : '#10b981';
-      const statusText = service.status === 'pending' ? 'Pendiente' : 'En Progreso';
-      const serviceEmoji = service.service_icon || '🔧';
+      const statusColor = '#10b981';
+      const statusText = 'En Progreso';
       
       return `
 const service${index} = L.marker([${service.latitude}, ${service.longitude}], { 
@@ -78,13 +77,13 @@ service${index}.bindPopup(\`
       <div class="user-avatar">👤</div>
       <div class="user-info">
         <div class="user-name">${service.user_email}</div>
-        <div class="status-badge status-${service.status}">${statusText}</div>
+        <div class="status-badge status-in_progress">${statusText}</div>
       </div>
     </div>
     <div class="service-info">
       <div class="info-row">
         <span class="info-label">Servicio:</span>
-        <span class="info-value">${serviceEmoji} ${service.service_name}</span>
+        <span class="info-value">${service.service_name}</span>
       </div>
       ${service.service_description ? '<div class="info-row"><span class="info-label">Descripción:</span><span class="info-value">' + service.service_description + '</span></div>' : ''}
       ${service.mechanic_name ? '<div class="info-row"><span class="info-label">Mecánico:</span><span class="info-value">🔧 ' + service.mechanic_name + '</span></div>' : ''}
