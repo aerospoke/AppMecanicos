@@ -49,6 +49,7 @@ function AppContent() {
     return (
       <ServiceMapScreen 
         onNavigateBack={() => setCurrentScreen('mechanic-dashboard')} 
+        onNavigateToHome={() => setCurrentScreen('home')}
         serviceRequest={selectedService}
       />
     );

@@ -9,6 +9,7 @@ import { useAuth } from '../context/AuthContext';
 
 interface ServiceMapScreenProps {
   onNavigateBack: () => void;
+  onNavigateToHome?: () => void;
   serviceRequest: {
     id: string;
     user_email: string;
@@ -21,7 +22,7 @@ interface ServiceMapScreenProps {
   };
 }
 
-export default function ServiceMapScreen({ onNavigateBack, serviceRequest }: ServiceMapScreenProps) {
+export default function ServiceMapScreen({ onNavigateBack, onNavigateToHome, serviceRequest }: ServiceMapScreenProps) {
   const { user, userProfile } = useAuth();
   const [loading, setLoading] = useState(true);
   const [mechanicLocation, setMechanicLocation] = useState(null);
@@ -64,15 +65,21 @@ export default function ServiceMapScreen({ onNavigateBack, serviceRequest }: Ser
 
       if (error) throw error;
 
-      Alert.alert(
-        '✅ Actualizado',
-        newStatus === 'in_progress' 
-          ? 'Has aceptado el servicio' 
-          : newStatus === 'cancelled'
-          ? 'Servicio rechazado'
-          : 'Servicio completado',
-        [{ text: 'OK', onPress: onNavigateBack }]
-      );
+      if (newStatus === 'in_progress') {
+        // Si acepta el servicio, redirigir al mapa principal
+        Alert.alert(
+          '✅ Servicio Aceptado',
+          'Has aceptado el servicio. Te redirigiremos al mapa principal.',
+          [{ text: 'OK', onPress: () => onNavigateToHome?.() || onNavigateBack() }]
+        );
+      } else {
+        // Si rechaza, volver al dashboard
+        Alert.alert(
+          newStatus === 'cancelled' ? '❌ Servicio Rechazado' : '✅ Actualizado',
+          newStatus === 'cancelled' ? 'Has rechazado el servicio' : 'Servicio actualizado',
+          [{ text: 'OK', onPress: onNavigateBack }]
+        );
+      }
     } catch (error) {
       console.error('Error actualizando servicio:', error);
       Alert.alert('❌ Error', 'No se pudo actualizar el servicio');
@@ -150,7 +157,7 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 // Marcador del cliente
 const clientIcon = L.divIcon({
   className: 'custom-icon',
-  html: '<div style="background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%); width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 16px rgba(245,158,11,0.6); border: 4px solid white; font-size: 22px;">👤</div>',
+  html: '<div style="background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%); width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 16px rgba(245,158,11,0.6); border: 4px solid white; font-size: 22px;">📍</div>',
   iconSize: [44, 44],
   iconAnchor: [22, 22]
 });
