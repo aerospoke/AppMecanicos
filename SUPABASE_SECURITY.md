@@ -90,6 +90,24 @@ USING (
   )
 );
 
+-- Política: Solo el mecánico asignado puede marcar como completado
+CREATE POLICY "Assigned mechanic can complete request"
+ON service_requests FOR UPDATE
+USING (
+  mechanic_id = auth.uid() OR
+  EXISTS (
+    SELECT 1 FROM profiles
+    WHERE id = auth.uid() AND rol = 'admin'
+  )
+)
+WITH CHECK (
+  mechanic_id = auth.uid() OR
+  EXISTS (
+    SELECT 1 FROM profiles
+    WHERE id = auth.uid() AND rol = 'admin'
+  )
+);
+
 -- Política: Los admins pueden eliminar solicitudes
 CREATE POLICY "Admins can delete requests"
 ON service_requests FOR DELETE
@@ -165,7 +183,7 @@ EXECUTE FUNCTION public.handle_new_user();
 
 ---
 
-## 5. Actualizar tabla `service_requests` (añadir coordenadas)
+## 5. Actualizar tabla `service_requests` (añadir coordenadas y mecánico)
 
 ```sql
 -- Si no existen las columnas de coordenadas, añadirlas
@@ -173,9 +191,49 @@ ALTER TABLE service_requests
 ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION,
 ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION;
 
+-- Añadir campos para trackear el mecánico asignado
+ALTER TABLE service_requests
+ADD COLUMN IF NOT EXISTS mechanic_id UUID REFERENCES auth.users(id),
+ADD COLUMN IF NOT EXISTS mechanic_name TEXT,
+ADD COLUMN IF NOT EXISTS accepted_at TIMESTAMP WITH TIME ZONE,
+ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP WITH TIME ZONE;
+
 -- Índice para búsquedas geográficas
 CREATE INDEX IF NOT EXISTS idx_service_requests_location 
 ON service_requests(latitude, longitude);
+
+-- Índice para búsquedas por mecánico
+CREATE INDEX IF NOT EXISTS idx_service_requests_mechanic 
+ON service_requests(mechanic_id);
+
+-- Índice para búsquedas por estado
+CREATE INDEX IF NOT EXISTS idx_service_requests_status 
+ON service_requests(status);
+```
+
+---
+
+## 6. Estructura completa de la tabla `service_requests`
+
+```sql
+-- Crear tabla completa con todos los campos
+CREATE TABLE IF NOT EXISTS service_requests (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  user_email TEXT,
+  service_name TEXT NOT NULL,
+  service_description TEXT,
+  service_type TEXT CHECK (service_type IN ('emergency', 'detail')),
+  service_icon TEXT,
+  latitude DOUBLE PRECISION,
+  longitude DOUBLE PRECISION,
+  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'in_progress', 'completed', 'cancelled')),
+  mechanic_id UUID REFERENCES auth.users(id),
+  mechanic_name TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  accepted_at TIMESTAMP WITH TIME ZONE,
+  completed_at TIMESTAMP WITH TIME ZONE
+);
 ```
 
 ---

@@ -10,7 +10,7 @@ import { getAll, update } from '../services/supabaseService';
  * Pantalla para mecánicos - Ver y gestionar solicitudes
  */
 export default function MechanicDashboardScreen({ onNavigateBack }) {
-  const { userProfile } = useAuth();
+  const { userProfile, user } = useAuth();
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -35,12 +35,27 @@ export default function MechanicDashboardScreen({ onNavigateBack }) {
   };
 
   const handleUpdateStatus = async (requestId, newStatus) => {
-    const { error } = await update('service_requests', requestId, {
-      status: newStatus,
-    });
+    // Si el mecánico está aceptando el servicio, registrar su ID
+    const updates: any = { status: newStatus };
+    
+    if (newStatus === 'in_progress' && user?.id) {
+      updates.mechanic_id = user.id;
+      updates.mechanic_name = userProfile?.nombre || user.email;
+      updates.accepted_at = new Date().toISOString();
+    }
+
+    if (newStatus === 'completed') {
+      updates.completed_at = new Date().toISOString();
+    }
+
+    const { error } = await update('service_requests', requestId, updates);
 
     if (!error) {
-      Alert.alert('Éxito', `Estado actualizado a: ${newStatus}`);
+      let message = `Estado actualizado a: ${getStatusText(newStatus)}`;
+      if (newStatus === 'in_progress') {
+        message = '✅ Has aceptado esta solicitud. Ahora te aparece como "En Proceso"';
+      }
+      Alert.alert('Éxito', message);
       loadRequests(); // Recargar lista
     } else {
       Alert.alert('Error', 'No se pudo actualizar el estado');
@@ -141,6 +156,15 @@ export default function MechanicDashboardScreen({ onNavigateBack }) {
                     </Text>
                   </View>
 
+                  {request.mechanic_name && (
+                    <View style={styles.detailRow}>
+                      <MaterialIcons name="build" size={16} color="#10b981" />
+                      <Text style={[styles.detailText, { color: '#10b981', fontWeight: '600' }]}>
+                        Atendido por: {request.mechanic_name}
+                      </Text>
+                    </View>
+                  )}
+
                   <View style={[styles.statusBadge, { backgroundColor: getStatusColor(request.status) + '20' }]}>
                     <Text style={[styles.statusText, { color: getStatusColor(request.status) }]}>
                       {getStatusText(request.status)}
@@ -169,13 +193,24 @@ export default function MechanicDashboardScreen({ onNavigateBack }) {
                 )}
 
                 {request.status === 'in_progress' && (
-                  <TouchableOpacity 
-                    style={[styles.actionBtn, styles.completeBtn]}
-                    onPress={() => handleUpdateStatus(request.id, 'completed')}
-                  >
-                    <MaterialIcons name="done-all" size={18} color="#fff" />
-                    <Text style={styles.actionBtnText}>Marcar Completado</Text>
-                  </TouchableOpacity>
+                  <>
+                    {request.mechanic_id === user?.id ? (
+                      <TouchableOpacity 
+                        style={[styles.actionBtn, styles.completeBtn]}
+                        onPress={() => handleUpdateStatus(request.id, 'completed')}
+                      >
+                        <MaterialIcons name="done-all" size={18} color="#fff" />
+                        <Text style={styles.actionBtnText}>Marcar Completado</Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <View style={styles.assignedNote}>
+                        <MaterialIcons name="info" size={16} color="#667eea" />
+                        <Text style={styles.assignedNoteText}>
+                          Este servicio está siendo atendido por otro mecánico
+                        </Text>
+                      </View>
+                    )}
+                  </>
                 )}
               </View>
             ))
@@ -356,5 +391,20 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 14,
     fontWeight: '600',
+  },
+  assignedNote: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f0f4ff',
+    padding: 12,
+    borderRadius: 12,
+    marginTop: 16,
+    gap: 8,
+  },
+  assignedNoteText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#667eea',
+    fontWeight: '500',
   },
 });
