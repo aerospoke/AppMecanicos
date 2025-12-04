@@ -1,12 +1,22 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
+import { WebView } from 'react-native-webview';
 import * as Location from 'expo-location';
 import { createServiceRequest } from '../services/supabaseService';
+import { supabase } from '../config/supabase';
+import { useAuth } from '../context/AuthContext';
 
 export default function ServiceRequestScreen({ onNavigateBack }) {
+  const { user } = useAuth();
   const [selectedService, setSelectedService] = useState(null);
+  const [activeRequest, setActiveRequest] = useState(null);
+  const [currentLocation, setCurrentLocation] = useState(null);
+  const [mechanicLocation, setMechanicLocation] = useState(null);
+  const [routeInfo, setRouteInfo] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const webViewRef = useRef(null);
 
   const emergencyServices = [
     { id: 1, icon: 'battery-charging-full', name: 'Batería descargada', description: 'Arranque con cables o cambio de batería', type: 'emergency' },

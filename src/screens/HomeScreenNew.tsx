@@ -13,6 +13,7 @@ export default function HomeScreen({ onNavigateToProfile, onNavigateToServiceReq
   const [loading, setLoading] = useState(true);
   const [currentLocation, setCurrentLocation] = useState(null);
   const [serviceRequests, setServiceRequests] = useState([]);
+  const [routeInfo, setRouteInfo] = useState(null);
   const webViewRef = useRef(null);
 
   useEffect(() => {
@@ -284,9 +285,15 @@ fetch('https://router.project-osrm.org/route/v1/driving/${centerLng},${centerLat
         lineCap: 'round'
       }).addTo(map);
       
-      // Agregar marcador con distancia y tiempo
+      // Enviar información de ruta al componente React Native
       const distance = (route.distance / 1000).toFixed(1);
       const duration = Math.round(route.duration / 60);
+      
+      window.ReactNativeWebView.postMessage(JSON.stringify({
+        type: 'routeInfo',
+        distance: distance,
+        duration: duration
+      }));
       
       console.log('Ruta ${index}: ' + distance + ' km, ' + duration + ' min');
     }
@@ -308,6 +315,20 @@ map.fitBounds(bounds, { padding: [50, 50] });
 
   const htmlContent = generateMapHTML();
 
+  const handleWebViewMessage = (event) => {
+    try {
+      const data = JSON.parse(event.nativeEvent.data);
+      if (data.type === 'routeInfo') {
+        setRouteInfo({
+          distance: data.distance,
+          duration: data.duration
+        });
+      }
+    } catch (error) {
+      console.error('Error parsing message:', error);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       {loading && (
@@ -322,8 +343,19 @@ map.fitBounds(bounds, { padding: [50, 50] });
         style={styles.webview}
         javaScriptEnabled={true}
         onLoadEnd={() => setLoading(false)}
+        onMessage={handleWebViewMessage}
         key={serviceRequests.length} // Forzar recarga cuando cambien los servicios
       />
+      
+      {/* Mostrar información de ruta */}
+      {routeInfo && isMecanico(userRole) && (
+        <View style={styles.routeInfoContainer}>
+          <MaterialIcons name="directions-car" size={20} color="#fff" />
+          <Text style={styles.routeInfoText}>
+            {routeInfo.distance} km · {routeInfo.duration} min
+          </Text>
+        </View>
+      )}
       
       <View style={styles.locationButtons}>
         {/* Botón para clientes: Solicitar Mecánico */}
@@ -366,6 +398,30 @@ const styles = StyleSheet.create({
     position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
     justifyContent: 'center', alignItems: 'center',
     backgroundColor: '#fff', zIndex: 1000,
+  },
+  routeInfoContainer: {
+    position: 'absolute',
+    bottom: 110,
+    left: 125,
+    backgroundColor: '#ffd500',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+    maxWidth: '50%',
+  },
+  routeInfoText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 13,
+    letterSpacing: 0.2,
   },
   locationButtons: {
     position: 'absolute',
