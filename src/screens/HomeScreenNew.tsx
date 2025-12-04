@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, StyleSheet, ActivityIndicator, TouchableOpacity, Text } from 'react-native';
+import { View, StyleSheet, ActivityIndicator, TouchableOpacity, Text, Modal, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -7,18 +7,52 @@ import * as Location from 'expo-location';
 import { useAuth } from '../context/AuthContext';
 import { isMecanico } from '../utils/roleUtils';
 import { supabase } from '../config/supabase';
+import { createServiceRequest } from '../services/supabaseService';
 
-export default function HomeScreen({ onNavigateToProfile, onNavigateToServiceRequest, onNavigateToMechanicDashboard }) {
-  const { userRole } = useAuth();
+export default function HomeScreen({ 
+  onNavigateToProfile, 
+  onNavigateToServiceRequest, 
+  onNavigateToMechanicDashboard,
+  selectedServiceFromDashboard,
+  onClearSelectedService
+}) {
+  const { userRole, user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [currentLocation, setCurrentLocation] = useState(null);
   const [serviceRequests, setServiceRequests] = useState([]);
   const [routeInfo, setRouteInfo] = useState(null);
+  const [showServiceModal, setShowServiceModal] = useState(false);
+  const [myActiveService, setMyActiveService] = useState(null);
   const webViewRef = useRef(null);
 
   useEffect(() => {
     loadLocationAndServices();
+    if (userRole === 'usuario') {
+      checkMyActiveService();
+    }
   }, []);
+
+  useEffect(() => {
+    // Si hay un servicio seleccionado desde el dashboard, actualizar
+    if (selectedServiceFromDashboard) {
+      loadLocationAndServices();
+    }
+  }, [selectedServiceFromDashboard]);
+
+  const checkMyActiveService = async () => {
+    // Verificar si el usuario tiene un servicio activo
+    const { data, error } = await supabase
+      .from('service_requests')
+      .select('*')
+      .eq('user_id', user?.id)
+      .in('status', ['pending', 'in_progress'])
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    if (!error && data && data.length > 0) {
+      setMyActiveService(data[0]);
+    }
+  };
 
   const loadLocationAndServices = async () => {
     try {
@@ -30,6 +64,12 @@ export default function HomeScreen({ onNavigateToProfile, onNavigateToServiceReq
           latitude: location.coords.latitude,
           longitude: location.coords.longitude,
         });
+      }
+
+      // Si hay un servicio seleccionado desde dashboard, mostrar solo ese
+      if (selectedServiceFromDashboard) {
+        setServiceRequests([selectedServiceFromDashboard]);
+        return;
       }
 
       // Obtener solo solicitudes de servicio en progreso
@@ -49,7 +89,61 @@ export default function HomeScreen({ onNavigateToProfile, onNavigateToServiceReq
   };
 
   const handleRequestAssistance = () => {
-    onNavigateToServiceRequest();
+    if (myActiveService) {
+      // Si ya tiene un servicio activo, mostrar detalles
+      Alert.alert(
+        '📋 Servicio Activo',
+        `Ya tienes un servicio "${myActiveService.service_name}" ${myActiveService.status === 'pending' ? 'pendiente' : 'en proceso'}.\n\nEstado: ${myActiveService.status === 'pending' ? '⏳ Esperando mecánico' : '🔧 Mecánico en camino'}`,
+        [{ text: 'Entendido' }]
+      );
+    } else {
+      // Mostrar modal de servicios
+      setShowServiceModal(true);
+    }
+  };
+
+  const emergencyServices = [
+    { id: 1, icon: 'battery-charging-full', name: 'Batería descargada', description: 'Arranque con cables o cambio de batería', type: 'emergency' },
+    { id: 2, icon: 'build-circle', name: 'Llanta ponchada', description: 'Cambio de neumático en el lugar', type: 'emergency' },
+    { id: 3, icon: 'warning', name: 'No arranca el motor', description: 'Diagnóstico y reparación básica', type: 'emergency' },
+    { id: 4, icon: 'local-fire-department', name: 'Sobrecalentamiento', description: 'Revisión del sistema de enfriamiento', type: 'emergency' },
+    { id: 5, icon: 'lock-open', name: 'Llaves dentro del auto', description: 'Apertura de vehículo sin daños', type: 'emergency' },
+  ];
+
+  const detailServices = [
+    { id: 6, icon: 'settings', name: 'Kit de distribución', description: 'Cambio completo de kit de distribución', type: 'detail' },
+    { id: 7, icon: 'water-drop', name: 'Cambio de aceite', description: 'Aceite y filtro de motor', type: 'detail' },
+    { id: 8, icon: 'build', name: 'Frenos', description: 'Cambio de pastillas o discos de freno', type: 'detail' },
+    { id: 9, icon: 'swap-vert', name: 'Suspensión', description: 'Reparación de amortiguadores', type: 'detail' },
+    { id: 10, icon: 'ac-unit', name: 'Aire acondicionado', description: 'Recarga y reparación de A/C', type: 'detail' },
+    { id: 11, icon: 'navigation', name: 'Alineación y balanceo', description: 'Servicio completo de alineación', type: 'detail' },
+  ];
+
+  const handleSelectService = async (service) => {
+    setShowServiceModal(false);
+    
+    const { data, error } = await createServiceRequest({
+      service_name: service.name,
+      service_description: service.description,
+      service_type: service.type,
+      service_icon: service.icon,
+      latitude: currentLocation?.latitude,
+      longitude: currentLocation?.longitude,
+    });
+
+    if (error) {
+      Alert.alert('❌ Error', 'No se pudo registrar la solicitud.');
+      return;
+    }
+
+    setMyActiveService(data[0]);
+    Alert.alert(
+      '✅ Solicitud Enviada',
+      `${service.name}\n\nUn mecánico se pondrá en contacto contigo pronto.`,
+      [{ text: 'Aceptar' }]
+    );
+    loadLocationAndServices();
+    checkMyActiveService();
   };
 
   // Generar HTML dinámico con las ubicaciones reales
@@ -356,6 +450,19 @@ map.fitBounds(bounds, { padding: [50, 50] });
           </Text>
         </View>
       )}
+
+      {/* Botón de volver al dashboard cuando se visualiza un servicio específico */}
+      {selectedServiceFromDashboard && isMecanico(userRole) && (
+        <TouchableOpacity 
+          style={styles.backToDashboardBtn}
+          onPress={() => {
+            onClearSelectedService();
+            onNavigateToMechanicDashboard();
+          }}
+        >
+          <MaterialIcons name="arrow-back" size={24} color="#667eea" />
+        </TouchableOpacity>
+      )}
       
       <View style={styles.locationButtons}>
         {/* Botón para clientes: Solicitar Mecánico */}
@@ -387,6 +494,69 @@ map.fitBounds(bounds, { padding: [50, 50] });
       >
         <MaterialIcons name="settings" size={28} color="#667eea" />
       </TouchableOpacity>
+
+      {/* Modal de Servicios */}
+      <Modal
+        visible={showServiceModal}
+        animationType="slide"
+        transparent={false}
+        onRequestClose={() => setShowServiceModal(false)}
+      >
+        <SafeAreaView style={styles.modalContainer} edges={['top', 'left', 'right', 'bottom']}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity style={styles.backBtn} onPress={() => setShowServiceModal(false)}>
+              <MaterialIcons name="close" size={24} color="#1f2937" />
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>🔧 Solicitar Servicio</Text>
+            <View style={{ width: 50 }} />
+          </View>
+
+          <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
+            <View style={styles.categorySection}>
+              <Text style={styles.categoryTitle}>🚨 Servicios de Emergencia</Text>
+              <Text style={styles.categorySubtitle}>Atención inmediata en el lugar</Text>
+              {emergencyServices.map((service) => (
+                <TouchableOpacity
+                  key={service.id}
+                  style={styles.serviceCard}
+                  onPress={() => handleSelectService(service)}
+                >
+                  <View style={styles.serviceIconContainer}>
+                    <MaterialIcons name={service.icon as any} size={28} color="#667eea" />
+                  </View>
+                  <View style={styles.serviceInfo}>
+                    <Text style={styles.serviceName}>{service.name}</Text>
+                    <Text style={styles.serviceDescription}>{service.description}</Text>
+                  </View>
+                  <MaterialIcons name="chevron-right" size={32} color="#9ca3af" />
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <View style={styles.categorySection}>
+              <Text style={styles.categoryTitle}>⚙️ Servicios Detallados</Text>
+              <Text style={styles.categorySubtitle}>Reparaciones y mantenimiento completo</Text>
+              {detailServices.map((service) => (
+                <TouchableOpacity
+                  key={service.id}
+                  style={styles.serviceCard}
+                  onPress={() => handleSelectService(service)}
+                >
+                  <View style={styles.serviceIconContainer}>
+                    <MaterialIcons name={service.icon as any} size={28} color="#667eea" />
+                  </View>
+                  <View style={styles.serviceInfo}>
+                    <Text style={styles.serviceName}>{service.name}</Text>
+                    <Text style={styles.serviceDescription}>{service.description}</Text>
+                  </View>
+                  <MaterialIcons name="chevron-right" size={32} color="#9ca3af" />
+                </TouchableOpacity>
+              ))}
+            </View>
+            <View style={{ height: 40 }} />
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -472,5 +642,98 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 6,
+  },
+  backToDashboardBtn: {
+    position: 'absolute',
+    top: 50,
+    left: 20,
+    backgroundColor: '#fff',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 16,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#1f2937',
+  },
+  backBtn: {
+    width: 50,
+    height: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    flex: 1,
+    paddingHorizontal: 20,
+  },
+  categorySection: {
+    marginTop: 24,
+    marginBottom: 16,
+  },
+  categoryTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1f2937',
+    marginBottom: 4,
+  },
+  categorySubtitle: {
+    fontSize: 13,
+    color: '#6b7280',
+    marginBottom: 12,
+  },
+  serviceCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f9fafb',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 2,
+    borderColor: '#e5e7eb',
+  },
+  serviceIconContainer: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#f0f4ff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  serviceInfo: {
+    flex: 1,
+  },
+  serviceName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1f2937',
+    marginBottom: 4,
+  },
+  serviceDescription: {
+    fontSize: 13,
+    color: '#6b7280',
   },
 });

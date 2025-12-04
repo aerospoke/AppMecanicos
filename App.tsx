@@ -6,9 +6,7 @@ import { ActivityIndicator, View } from 'react-native';
 import LoginScreen from './src/screens/LoginScreen';
 import HomeScreenNew from './src/screens/HomeScreenNew';
 import ProfileScreen from './src/screens/ProfileScreen';
-import ServiceRequestScreen from './src/screens/ServiceRequestScreen';
 import MechanicDashboardScreen from './src/screens/MechanicDashboardScreen';
-import ServiceMapScreen from './src/screens/ServiceMapScreen';
 
 function AppContent() {
   const { user, loading } = useAuth();
@@ -25,10 +23,6 @@ function AppContent() {
 
   if (!user) return <LoginScreen />;
 
-  if (currentScreen === 'service') {
-    return <ServiceRequestScreen onNavigateBack={() => setCurrentScreen('home')} />;
-  }
-
   if (currentScreen === 'profile') {
     return <ProfileScreen onNavigateBack={() => setCurrentScreen('home')} />;
   }
@@ -39,18 +33,8 @@ function AppContent() {
         onNavigateBack={() => setCurrentScreen('home')} 
         onNavigateToMap={(service) => {
           setSelectedService(service);
-          setCurrentScreen('service-map');
+          setCurrentScreen('home');
         }}
-      />
-    );
-  }
-
-  if (currentScreen === 'service-map' && selectedService) {
-    return (
-      <ServiceMapScreen 
-        onNavigateBack={() => setCurrentScreen('mechanic-dashboard')} 
-        onNavigateToHome={() => setCurrentScreen('home')}
-        serviceRequest={selectedService}
       />
     );
   }
@@ -58,8 +42,10 @@ function AppContent() {
   return (
     <HomeScreenNew 
       onNavigateToProfile={() => setCurrentScreen('profile')}
-      onNavigateToServiceRequest={() => setCurrentScreen('service')}
+      onNavigateToServiceRequest={() => {}}
       onNavigateToMechanicDashboard={() => setCurrentScreen('mechanic-dashboard')}
+      selectedServiceFromDashboard={selectedService}
+      onClearSelectedService={() => setSelectedService(null)}
     />
   );
 }
