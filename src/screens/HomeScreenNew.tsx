@@ -88,6 +88,40 @@ export default function HomeScreen({
     }
   };
 
+  const handleAcceptService = async () => {
+    if (!selectedServiceFromDashboard) return;
+
+    const updates: any = { 
+      status: 'in_progress',
+      mechanic_id: user?.id,
+      mechanic_name: user?.email,
+      accepted_at: new Date().toISOString()
+    };
+
+    const { error } = await supabase
+      .from('service_requests')
+      .update(updates)
+      .eq('id', selectedServiceFromDashboard.id);
+
+    if (!error) {
+      Alert.alert(
+        '✅ Servicio Aceptado',
+        'Has aceptado esta solicitud. Ahora aparece en "En Proceso"',
+        [
+          {
+            text: 'Entendido',
+            onPress: () => {
+              onClearSelectedService();
+              onNavigateToMechanicDashboard();
+            }
+          }
+        ]
+      );
+    } else {
+      Alert.alert('❌ Error', 'No se pudo aceptar el servicio');
+    }
+  };
+
   const handleRequestAssistance = () => {
     if (myActiveService) {
       // Si ya tiene un servicio activo, mostrar detalles
@@ -450,23 +484,36 @@ map.fitBounds(bounds, { padding: [50, 50] });
           </Text>
         </View>
       )}
-
-      {/* Botón de volver al dashboard cuando se visualiza un servicio específico */}
-      {selectedServiceFromDashboard && isMecanico(userRole) && (
-        <TouchableOpacity 
-          style={styles.backToDashboardBtn}
-          onPress={() => {
-            onClearSelectedService();
-            onNavigateToMechanicDashboard();
-          }}
-        >
-          <MaterialIcons name="arrow-back" size={24} color="#667eea" />
-        </TouchableOpacity>
-      )}
       
       <View style={styles.locationButtons}>
-        {/* Botón para clientes: Solicitar Mecánico */}
-        {userRole === 'usuario' && (
+        {/* Botones cuando se está viendo un servicio específico desde el dashboard */}
+        {selectedServiceFromDashboard && isMecanico(userRole) && (
+          <>
+            <TouchableOpacity 
+              style={[styles.locationBtn, styles.backToListBtn]}
+              onPress={() => {
+                onClearSelectedService();
+                onNavigateToMechanicDashboard();
+              }}
+            >
+              <MaterialIcons name="arrow-back" size={20} color="#fff" style={{ marginRight: 8 }} />
+              <Text style={styles.btnText}>Volver</Text>
+            </TouchableOpacity>
+
+            {selectedServiceFromDashboard.status === 'pending' && (
+              <TouchableOpacity 
+                style={[styles.locationBtn, styles.acceptBtn]}
+                onPress={handleAcceptService}
+              >
+                <MaterialIcons name="check-circle" size={20} color="#fff" style={{ marginRight: 8 }} />
+                <Text style={styles.btnText}>Aceptar</Text>
+              </TouchableOpacity>
+            )}
+          </>
+        )}
+
+        {/* Botón para clientes: Solicitar Mecánico (solo cuando NO hay servicio seleccionado) */}
+        {!selectedServiceFromDashboard && userRole === 'usuario' && (
           <TouchableOpacity 
             style={styles.locationBtn}
             onPress={handleRequestAssistance}
@@ -476,8 +523,8 @@ map.fitBounds(bounds, { padding: [50, 50] });
           </TouchableOpacity>
         )}
 
-        {/* Botón para mecánicos y admins: Ver Solicitudes */}
-        {isMecanico(userRole) && (
+        {/* Botón Ver Solicitudes (solo cuando NO hay servicio seleccionado) */}
+        {!selectedServiceFromDashboard && isMecanico(userRole) && (
           <TouchableOpacity 
             style={[styles.locationBtn, styles.mechanicBtn]}
             onPress={onNavigateToMechanicDashboard}
@@ -601,6 +648,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     paddingHorizontal: 20,
+    gap: 12,
   },
   locationBtn: {
     backgroundColor: '#667eea',
@@ -620,6 +668,14 @@ const styles = StyleSheet.create({
   mechanicBtn: {
     backgroundColor: '#10b981',
     shadowColor: '#10b981',
+  },
+  acceptBtn: {
+    backgroundColor: '#10b981',
+    shadowColor: '#10b981',
+  },
+  backToListBtn: {
+    backgroundColor: '#6b7280',
+    shadowColor: '#6b7280',
   },
   btnText: {
     color: '#fff',
