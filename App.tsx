@@ -4,7 +4,7 @@ import { ActivityIndicator, View } from 'react-native';
 
 // Screens
 import LoginScreen from './src/screens/LoginScreen';
-import HomeScreenNew from './src/screens/HomeScreenNew';
+import HomeScreen from './src/screens/HomeScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 import MechanicDashboardScreen from './src/screens/MechanicDashboardScreen';
 
@@ -40,7 +40,7 @@ function AppContent() {
   }
 
   return (
-    <HomeScreenNew 
+    <HomeScreen 
       onNavigateToProfile={() => setCurrentScreen('profile')}
       onNavigateToServiceRequest={() => {}}
       onNavigateToMechanicDashboard={() => setCurrentScreen('mechanic-dashboard')}
