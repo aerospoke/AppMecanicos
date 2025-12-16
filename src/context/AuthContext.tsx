@@ -2,6 +2,7 @@ import React, { createContext, useState, useEffect, useContext } from 'react';
 import { supabase } from '../config/supabase';
 import { Session, User } from '@supabase/supabase-js';
 import { getUserProfile } from '../services/supabaseService';
+import { registerForPushNotificationsAsync, savePushToken } from '../services/notificationService';
 
 interface UserProfile {
   id: string;
@@ -40,13 +41,38 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   const loadUserProfile = async (userId: string) => {
+    console.log('🔍 Cargando perfil de usuario:', userId);
     const { data, error } = await getUserProfile(userId);
     if (!error && data) {
+      console.log('✅ Perfil cargado:', data);
       setUserProfile(data as UserProfile);
       setUserRole(data.rol as 'usuario' | 'mecanico' | 'admin');
+      
+      // Registrar token de notificaciones para TODOS los usuarios
+      console.log('📱 Registrando push token para:', data.rol);
+      registerPushToken(userId);
     } else {
-      // Si no existe perfil, asignar rol por defecto 'cliente'
-      setUserRole('cliente');
+      console.log('⚠️ Error cargando perfil o no existe');
+      // Si no existe perfil, asignar rol por defecto 'usuario'
+      setUserRole("usuario");
+    }
+  };
+
+  const registerPushToken = async (userId: string) => {
+    try {
+      console.log('🔄 Iniciando registro de push token...');
+      const token = await registerForPushNotificationsAsync();
+      console.log('📱 Token obtenido:', token);
+      
+      if (token) {
+        console.log('💾 Guardando token en BD...');
+        await savePushToken(userId, token);
+        console.log('✅ Token de notificaciones registrado para mecánico');
+      } else {
+        console.log('⚠️ No se obtuvo token (puede ser emulador)');
+      }
+    } catch (error) {
+      console.log('❌ Error registrando token de notificaciones:', error);
     }
   };
 

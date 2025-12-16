@@ -10,6 +10,7 @@ import { useAuth } from '../context/AuthContext';
 import { isMecanico } from '../utils/roleUtils';
 import { supabase } from '../config/supabase';
 import { createServiceRequest } from '../services/supabaseService';
+import { sendPushToMechanics } from '../services/notificationService';
 import { RootStackParamList } from '../navigation/AppNavigator';
 
 type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
@@ -174,6 +175,18 @@ export default function HomeScreen() {
     }
 
     setMyActiveService(data[0]);
+    
+    // 🔔 Enviar notificación push a todos los mecánicos
+    await sendPushToMechanics(
+      '🔧 Nueva Solicitud de Servicio',
+      `${service.name} - Un cliente necesita asistencia`,
+      {
+        serviceId: data[0]?.id,
+        serviceName: service.name,
+        serviceType: service.type,
+      }
+    );
+    
     Alert.alert(
       '✅ Solicitud Enviada',
       `${service.name}\n\nUn mecánico se pondrá en contacto contigo pronto.`,
