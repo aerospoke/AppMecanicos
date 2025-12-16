@@ -7,6 +7,7 @@ import LoginScreen from '../screens/LoginScreen';
 import HomeScreen from '../screens/HomeScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import MechanicDashboardScreen from '../screens/MechanicDashboardScreen';
+import TestSupabaseScreen from '../screens/TestSupabaseScreen';
 
 // Definir tipos para la navegación
 export type RootStackParamList = {
@@ -14,6 +15,7 @@ export type RootStackParamList = {
   Home: { selectedService?: any } | undefined;
   Profile: undefined;
   MechanicDashboard: undefined;
+  TestSupabase: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -46,6 +48,10 @@ export default function AppNavigator() {
           <Stack.Screen 
             name="MechanicDashboard" 
             component={MechanicDashboardScreen}
+          />
+          <Stack.Screen 
+            name="TestSupabase" 
+            component={TestSupabaseScreen}
           />
         </>
       )}

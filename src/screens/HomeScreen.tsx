@@ -11,6 +11,7 @@ import { isMecanico } from '../utils/roleUtils';
 import { supabase } from '../config/supabase';
 import { createServiceRequest } from '../services/supabaseService';
 import { sendPushToMechanics } from '../services/notificationService';
+import { startMechanicTracking, stopMechanicTracking, subscribeMechanicLocation, updateServiceStatus } from '../services/trackingService';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { styles } from './HomeScreen.styles';
 
@@ -44,6 +45,7 @@ export default function HomeScreen() {
   const [routeCoordinates, setRouteCoordinates] = useState<Array<{ latitude: number; longitude: number }>>([]);
   const [routeDistance, setRouteDistance] = useState<string>('');
   const [routeDuration, setRouteDuration] = useState<string>('');
+  const [mechanicLocation, setMechanicLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const mapRef = useRef<MapView>(null);
 
   useEffect(() => {
@@ -70,12 +72,43 @@ export default function HomeScreen() {
       .from('service_requests')
       .select('*')
       .eq('user_id', user?.id)
-      .in('status', ['pending', 'in_progress'])
+      .in('status', ['pending', 'accepted', 'in_progress'])
       .order('created_at', { ascending: false })
       .limit(1);
 
     if (!error && data && data.length > 0) {
-      setMyActiveService(data[0]);
+      const service = data[0];
+      setMyActiveService(service);
+
+      // Si el servicio fue aceptado y hay un mecánico asignado
+      // Suscribirse a su ubicación en tiempo real
+      if (service.mechanic_id && service.status === 'accepted') {
+        console.log('👀 Suscribiéndose a ubicación del mecánico...');
+        
+        const subscription = subscribeMechanicLocation(
+          service.id,
+          (location) => {
+            console.log('📍 Mecánico actualizado:', location);
+            setMechanicLocation({
+              latitude: location.latitude,
+              longitude: location.longitude,
+            });
+
+            // Actualizar ruta si es necesario
+            if (currentLocation) {
+              getDirections(location, {
+                latitude: service.latitude,
+                longitude: service.longitude,
+              });
+            }
+          }
+        );
+
+        // Limpiar suscripción al desmontar
+        return () => {
+          subscription.unsubscribe();
+        };
+      }
     }
   };
 
@@ -137,24 +170,110 @@ export default function HomeScreen() {
   };
 
   const handleAcceptService = async () => {
+    if (!selectedServiceFromDashboard || !user) return;
+
+    try {
+      // 1. Actualizar estado a 'accepted' (mecánico en camino)
+      const { error } = await supabase
+        .from('service_requests')
+        .update({ 
+          status: 'accepted',
+          mechanic_id: user.id,
+        })
+        .eq('id', selectedServiceFromDashboard.id);
+
+      if (error) {
+        Alert.alert('Error', 'No se pudo aceptar el servicio');
+        return;
+      }
+
+      // 2. Iniciar tracking GPS del mecánico
+      await startMechanicTracking(selectedServiceFromDashboard.id, user.id);
+
+      // 3. Enviar notificación al cliente
+      // TODO: Implementar sendPushToUser() para notificar al cliente
+      
+      Alert.alert(
+        '🎯 Servicio Aceptado',
+        'Tu ubicación se está compartiendo con el cliente en tiempo real.',
+        [
+          {
+            text: 'Entendido',
+            onPress: () => {
+              // Quedarse en la pantalla con navegación activa
+              console.log('✅ Mecánico en camino con GPS activo');
+            }
+          }
+        ]
+      );
+
+    } catch (error) {
+      console.error('Error aceptando servicio:', error);
+      Alert.alert('Error', 'No se pudo iniciar el tracking GPS');
+    }
+  };
+
+  const handleArrived = async () => {
     if (!selectedServiceFromDashboard) return;
 
-    const updates: any = { 
-      status: 'in_progress',
-      mechanic_id: user?.id,
-    };
+    Alert.alert(
+      '📍 Confirmar Llegada',
+      '¿Has llegado a la ubicación del cliente?',
+      [
+        { text: 'No', style: 'cancel' },
+        {
+          text: 'Sí, he llegado',
+          onPress: async () => {
+            try {
+              await updateServiceStatus(selectedServiceFromDashboard.id, 'arrived');
+              Alert.alert('✅ Llegada Confirmada', 'El cliente ha sido notificado');
+              // TODO: Enviar push al cliente
+            } catch (error) {
+              Alert.alert('Error', 'No se pudo actualizar el estado');
+            }
+          }
+        }
+      ]
+    );
+  };
 
-    const { error } = await supabase
-      .from('service_requests')
-      .update(updates)
-      .eq('id', selectedServiceFromDashboard.id);
+  const handleStartWork = async () => {
+    if (!selectedServiceFromDashboard) return;
 
-    if (error) {
-      Alert.alert('Error', 'No se pudo aceptar el servicio');
-    } else {
-      Alert.alert('¡Éxito!', 'Has aceptado el servicio');
-      navigation.navigate('MechanicDashboard');
+    try {
+      await updateServiceStatus(selectedServiceFromDashboard.id, 'in_progress');
+      Alert.alert('🔧 Servicio Iniciado', 'Puedes comenzar a trabajar en el vehículo');
+    } catch (error) {
+      Alert.alert('Error', 'No se pudo actualizar el estado');
     }
+  };
+
+  const handleCompleteService = async () => {
+    if (!selectedServiceFromDashboard) return;
+
+    Alert.alert(
+      '✅ Completar Servicio',
+      '¿El servicio ha sido completado exitosamente?',
+      [
+        { text: 'No', style: 'cancel' },
+        {
+          text: 'Sí, completar',
+          onPress: async () => {
+            try {
+              await updateServiceStatus(selectedServiceFromDashboard.id, 'completed');
+              await stopMechanicTracking();
+              Alert.alert(
+                '🎉 Servicio Completado',
+                'El cliente puede calificar tu trabajo',
+                [{ text: 'OK', onPress: () => navigation.navigate('MechanicDashboard') }]
+              );
+            } catch (error) {
+              Alert.alert('Error', 'No se pudo completar el servicio');
+            }
+          }
+        }
+      ]
+    );
   };
 
   const handleCancelService = async () => {
@@ -405,6 +524,25 @@ export default function HomeScreen() {
                 onPress={() => setSelectedService(service)}
               />
             ))}
+
+            {/* Marcador del mecánico en movimiento (para el cliente) */}
+            {mechanicLocation && myActiveService && (
+              <Marker
+                coordinate={mechanicLocation}
+                title="Tu Mecánico"
+                description="Llegando a tu ubicación"
+              >
+                <View style={{ 
+                  backgroundColor: '#10b981', 
+                  padding: 8, 
+                  borderRadius: 20,
+                  borderWidth: 3,
+                  borderColor: '#fff',
+                }}>
+                  <MaterialIcons name="build-circle" size={32} color="#fff" />
+                </View>
+              </Marker>
+            )}
           </MapView>
         ) : (
           <View style={styles.loadingContainer}>
@@ -441,10 +579,14 @@ export default function HomeScreen() {
               <MaterialIcons name="build-circle" size={24} color="#10b981" />
               <View style={styles.activeBannerText}>
                 <Text style={styles.activeBannerTitle}>
-                  Servicio {myActiveService.status === 'pending' ? 'Pendiente' : 'En Progreso'}
+                  {myActiveService.status === 'pending' && 'Buscando Mecánico...'}
+                  {myActiveService.status === 'accepted' && '🚗 Mecánico en camino'}
+                  {myActiveService.status === 'arrived' && '📍 Mecánico ha llegado'}
+                  {myActiveService.status === 'in_progress' && '🔧 Servicio en progreso'}
                 </Text>
                 <Text style={styles.activeBannerSubtitle}>
                   {myActiveService.service_type}
+                  {routeDuration && myActiveService.status === 'accepted' && ` • Llega en ${routeDuration}`}
                 </Text>
               </View>
             </View>
@@ -477,12 +619,45 @@ export default function HomeScreen() {
                 </View>
               )}
             </View>
-            <TouchableOpacity 
-              style={styles.acceptBtn}
-              onPress={handleAcceptService}
-            >
-              <Text style={styles.acceptBtnText}>Aceptar Servicio</Text>
-            </TouchableOpacity>
+
+            {/* Botones según el estado del servicio */}
+            {selectedServiceFromDashboard.status === 'pending' && (
+              <TouchableOpacity 
+                style={styles.acceptBtn}
+                onPress={handleAcceptService}
+              >
+                <Text style={styles.acceptBtnText}>Aceptar Servicio</Text>
+              </TouchableOpacity>
+            )}
+
+            {selectedServiceFromDashboard.status === 'accepted' && (
+              <View style={{ gap: 8 }}>
+                <TouchableOpacity 
+                  style={[styles.acceptBtn, { backgroundColor: '#f59e0b' }]}
+                  onPress={handleArrived}
+                >
+                  <Text style={styles.acceptBtnText}>📍 He Llegado</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {selectedServiceFromDashboard.status === 'arrived' && (
+              <TouchableOpacity 
+                style={[styles.acceptBtn, { backgroundColor: '#3b82f6' }]}
+                onPress={handleStartWork}
+              >
+                <Text style={styles.acceptBtnText}>🔧 Iniciar Trabajo</Text>
+              </TouchableOpacity>
+            )}
+
+            {selectedServiceFromDashboard.status === 'in_progress' && (
+              <TouchableOpacity 
+                style={[styles.acceptBtn, { backgroundColor: '#10b981' }]}
+                onPress={handleCompleteService}
+              >
+                <Text style={styles.acceptBtnText}>✅ Completar Servicio</Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
       </View>
