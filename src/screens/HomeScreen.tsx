@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, StyleSheet, TouchableOpacity, Text, Modal, ScrollView, Alert, Dimensions, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Text, Modal, ScrollView, Alert, Dimensions, ActivityIndicator, Linking, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import MapView, { Marker, PROVIDER_GOOGLE, Polyline } from 'react-native-maps';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -42,6 +42,9 @@ export default function HomeScreen() {
   const [myActiveService, setMyActiveService] = useState<ServiceRequest | null>(null);
   const [selectedService, setSelectedService] = useState<ServiceRequest | null>(null);
   const [isLoadingMap, setIsLoadingMap] = useState(true);
+  const [routeCoordinates, setRouteCoordinates] = useState<Array<{ latitude: number; longitude: number }>>([]);
+  const [routeDistance, setRouteDistance] = useState<string>('');
+  const [routeDuration, setRouteDuration] = useState<string>('');
   const mapRef = useRef<MapView>(null);
 
   useEffect(() => {
@@ -258,6 +261,85 @@ export default function HomeScreen() {
     return '#6b7280';
   };
 
+  const getDirections = async (origin: { latitude: number; longitude: number }, destination: { latitude: number; longitude: number }) => {
+    try {
+      const apiKey = process.env.GOOGLE_MAPS_API_KEY || 'AIzaSyAncz2JIS0VyL21Ywo9gDZyQUAPPxjgrnw';
+      const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${origin.latitude},${origin.longitude}&destination=${destination.latitude},${destination.longitude}&key=${apiKey}`;
+      
+      const response = await fetch(url);
+      const data = await response.json();
+
+      if (data.status === 'OK' && data.routes.length > 0) {
+        const route = data.routes[0];
+        const points = decodePolyline(route.overview_polyline.points);
+        setRouteCoordinates(points);
+        
+        // Obtener distancia y duración
+        const leg = route.legs[0];
+        setRouteDistance(leg.distance.text);
+        setRouteDuration(leg.duration.text);
+
+        // Ajustar el mapa para mostrar toda la ruta
+        if (mapRef.current) {
+          mapRef.current.fitToCoordinates([origin, destination], {
+            edgePadding: { top: 100, right: 50, bottom: 100, left: 50 },
+            animated: true,
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error obteniendo direcciones:', error);
+    }
+  };
+
+  // Decodificar polyline de Google Maps
+  const decodePolyline = (encoded: string): Array<{ latitude: number; longitude: number }> => {
+    const poly = [];
+    let index = 0;
+    const len = encoded.length;
+    let lat = 0;
+    let lng = 0;
+
+    while (index < len) {
+      let b;
+      let shift = 0;
+      let result = 0;
+      do {
+        b = encoded.charCodeAt(index++) - 63;
+        result |= (b & 0x1f) << shift;
+        shift += 5;
+      } while (b >= 0x20);
+      const dlat = (result & 1) !== 0 ? ~(result >> 1) : result >> 1;
+      lat += dlat;
+
+      shift = 0;
+      result = 0;
+      do {
+        b = encoded.charCodeAt(index++) - 63;
+        result |= (b & 0x1f) << shift;
+        shift += 5;
+      } while (b >= 0x20);
+      const dlng = (result & 1) !== 0 ? ~(result >> 1) : result >> 1;
+      lng += dlng;
+
+      poly.push({
+        latitude: lat / 1e5,
+        longitude: lng / 1e5,
+      });
+    }
+    return poly;
+  };
+
+  // Llamar a getDirections cuando hay un servicio seleccionado
+  useEffect(() => {
+    if (selectedServiceFromDashboard && currentLocation) {
+      getDirections(currentLocation, {
+        latitude: selectedServiceFromDashboard.latitude,
+        longitude: selectedServiceFromDashboard.longitude,
+      });
+    }
+  }, [selectedServiceFromDashboard, currentLocation]);
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
@@ -301,6 +383,15 @@ export default function HomeScreen() {
             loadingIndicatorColor="#3b82f6"
             loadingBackgroundColor="#f9fafb"
           >
+            {/* Línea de ruta */}
+            {routeCoordinates.length > 0 && (
+              <Polyline
+                coordinates={routeCoordinates}
+                strokeColor="#3b82f6"
+                strokeWidth={4}
+              />
+            )}
+
             {/* Marcadores de servicios */}
             {serviceRequests.map((service) => (
               <Marker
@@ -374,6 +465,18 @@ export default function HomeScreen() {
               <Text style={styles.serviceDetailDesc}>
                 {selectedServiceFromDashboard.description || 'Sin descripción'}
               </Text>
+              {routeDistance && routeDuration && (
+                <View style={styles.routeInfo}>
+                  <View style={styles.routeInfoItem}>
+                    <MaterialIcons name="directions-car" size={16} color="#6b7280" />
+                    <Text style={styles.routeInfoText}>{routeDistance}</Text>
+                  </View>
+                  <View style={styles.routeInfoItem}>
+                    <MaterialIcons name="access-time" size={16} color="#6b7280" />
+                    <Text style={styles.routeInfoText}>{routeDuration}</Text>
+                  </View>
+                </View>
+              )}
             </View>
             <TouchableOpacity 
               style={styles.acceptBtn}
@@ -584,6 +687,21 @@ const styles = StyleSheet.create({
   serviceDetailDesc: {
     fontSize: 14,
     color: '#6b7280',
+  },
+  routeInfo: {
+    flexDirection: 'row',
+    gap: 16,
+    marginTop: 8,
+  },
+  routeInfoItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  routeInfoText: {
+    fontSize: 13,
+    color: '#6b7280',
+    fontWeight: '500',
   },
   acceptBtn: {
     backgroundColor: '#10b981',
