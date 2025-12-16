@@ -1,12 +1,18 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { signOut } from '../services/supabaseService';
 import { useAuth } from '../context/AuthContext';
 import { MaterialIcons } from '@expo/vector-icons';
 import { getRoleName, getRoleEmoji } from '../utils/roleUtils';
+import { RootStackParamList } from '../navigation/AppNavigator';
 
-export default function ProfileScreen({ onNavigateBack }) {
+type ProfileScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Profile'>;
+
+export default function ProfileScreen() {
+  const navigation = useNavigation<ProfileScreenNavigationProp>();
   const { user, userProfile, userRole } = useAuth();
 
   const handleLogout = async () => {
@@ -35,7 +41,7 @@ export default function ProfileScreen({ onNavigateBack }) {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right', 'bottom']}>
       <ScrollView style={styles.container}>
-        <TouchableOpacity style={styles.backBtn} onPress={onNavigateBack}>
+        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
         <MaterialIcons name="arrow-back" size={24} color="#1f2937" />
       </TouchableOpacity>
       

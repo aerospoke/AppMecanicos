@@ -2,14 +2,20 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import RoleGuard from '../components/RoleGuard';
 import { useAuth } from '../context/AuthContext';
 import { getAll, update } from '../services/supabaseService';
+import { RootStackParamList } from '../navigation/AppNavigator';
+
+type MechanicDashboardNavigationProp = NativeStackNavigationProp<RootStackParamList, 'MechanicDashboard'>;
 
 /**
  * Pantalla para mecánicos - Ver y gestionar solicitudes
  */
-export default function MechanicDashboardScreen({ onNavigateBack, onNavigateToMap }) {
+export default function MechanicDashboardScreen() {
+  const navigation = useNavigation<MechanicDashboardNavigationProp>();
   const { userProfile, user } = useAuth();
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -106,7 +112,7 @@ export default function MechanicDashboardScreen({ onNavigateBack, onNavigateToMa
     <RoleGuard allowedRoles={['mecanico', 'admin']}>
       <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']}>
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backBtn} onPress={onNavigateBack}>
+          <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
             <MaterialIcons name="arrow-back" size={24} color="#1f2937" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>🔧 Panel de Mecánico</Text>
@@ -286,7 +292,7 @@ export default function MechanicDashboardScreen({ onNavigateBack, onNavigateToMa
                     {request.latitude && request.longitude ? (
                       <TouchableOpacity 
                         style={[styles.actionBtn, styles.mapBtn]}
-                        onPress={() => onNavigateToMap(request)}
+                        onPress={() => navigation.navigate('Home', { selectedService: request })}
                       >
                         <MaterialIcons name="map" size={18} color="#fff" />
                         <Text style={styles.actionBtnText}>Ver Ubicación en Mapa</Text>
@@ -325,7 +331,7 @@ export default function MechanicDashboardScreen({ onNavigateBack, onNavigateToMa
                         {request.latitude && request.longitude && (
                           <TouchableOpacity 
                             style={[styles.actionBtn, styles.mapBtn]}
-                            onPress={() => onNavigateToMap(request)}
+                            onPress={() => navigation.navigate('Home', { selectedService: request })}
                           >
                             <MaterialIcons name="map" size={18} color="#fff" />
                             <Text style={styles.actionBtnText}>Ver Ubicación en Mapa</Text>

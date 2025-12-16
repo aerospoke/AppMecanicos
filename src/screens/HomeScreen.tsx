@@ -4,19 +4,23 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../context/AuthContext';
 import { isMecanico } from '../utils/roleUtils';
 import { supabase } from '../config/supabase';
 import { createServiceRequest } from '../services/supabaseService';
+import { RootStackParamList } from '../navigation/AppNavigator';
 
-export default function HomeScreen({ 
-  onNavigateToProfile, 
-  onNavigateToServiceRequest, 
-  onNavigateToMechanicDashboard,
-  selectedServiceFromDashboard,
-  onClearSelectedService
-}) {
+type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
+type HomeScreenRouteProp = RouteProp<RootStackParamList, 'Home'>;
+
+export default function HomeScreen() {
+  const navigation = useNavigation<HomeScreenNavigationProp>();
+  const route = useRoute<HomeScreenRouteProp>();
   const { userRole, user } = useAuth();
+  
+  const selectedServiceFromDashboard = route.params?.selectedService;
   const [loading, setLoading] = useState(true);
   const [currentLocation, setCurrentLocation] = useState(null);
   const [serviceRequests, setServiceRequests] = useState([]);
@@ -37,7 +41,7 @@ export default function HomeScreen({
     if (selectedServiceFromDashboard) {
       loadLocationAndServices();
     }
-  }, [selectedServiceFromDashboard]);
+  }, [route.params?.selectedService]);
 
   const checkMyActiveService = async () => {
     // Verificar si el usuario tiene un servicio activo
@@ -111,8 +115,7 @@ export default function HomeScreen({
           {
             text: 'Entendido',
             onPress: () => {
-              onClearSelectedService();
-              onNavigateToMechanicDashboard();
+              navigation.navigate('MechanicDashboard');
             }
           }
         ]
@@ -492,8 +495,7 @@ map.fitBounds(bounds, { padding: [50, 50] });
             <TouchableOpacity 
               style={[styles.locationBtn, styles.backToListBtn]}
               onPress={() => {
-                onClearSelectedService();
-                onNavigateToMechanicDashboard();
+                navigation.navigate('MechanicDashboard');
               }}
             >
               <MaterialIcons name="arrow-back" size={20} color="#fff" style={{ marginRight: 8 }} />
@@ -527,7 +529,7 @@ map.fitBounds(bounds, { padding: [50, 50] });
         {!selectedServiceFromDashboard && isMecanico(userRole) && (
           <TouchableOpacity 
             style={[styles.locationBtn, styles.mechanicBtn]}
-            onPress={onNavigateToMechanicDashboard}
+            onPress={() => navigation.navigate('MechanicDashboard')}
           >
             <MaterialIcons name="assignment" size={20} color="#fff" style={{ marginRight: 8 }} />
             <Text style={styles.btnText}>Ver Solicitudes</Text>
@@ -537,7 +539,7 @@ map.fitBounds(bounds, { padding: [50, 50] });
 
       <TouchableOpacity 
         style={styles.settingsBtn}
-        onPress={onNavigateToProfile}
+        onPress={() => navigation.navigate('Profile')}
       >
         <MaterialIcons name="settings" size={28} color="#667eea" />
       </TouchableOpacity>
