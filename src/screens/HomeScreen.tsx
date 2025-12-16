@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, StyleSheet, ActivityIndicator, TouchableOpacity, Text, Modal, ScrollView, Alert } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Text, Modal, ScrollView, Alert, Dimensions, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { WebView } from 'react-native-webview';
+import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -16,36 +16,54 @@ import { RootStackParamList } from '../navigation/AppNavigator';
 type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 type HomeScreenRouteProp = RouteProp<RootStackParamList, 'Home'>;
 
+const { width, height } = Dimensions.get('window');
+
+interface ServiceRequest {
+  id: string;
+  user_id: string;
+  status: string;
+  service_type: string;
+  latitude: number;
+  longitude: number;
+  description?: string;
+  mechanic_id?: string;
+  created_at: string;
+}
+
 export default function HomeScreen() {
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const route = useRoute<HomeScreenRouteProp>();
   const { userRole, user } = useAuth();
   
   const selectedServiceFromDashboard = route.params?.selectedService;
-  const [loading, setLoading] = useState(true);
-  const [currentLocation, setCurrentLocation] = useState(null);
-  const [serviceRequests, setServiceRequests] = useState([]);
-  const [routeInfo, setRouteInfo] = useState(null);
+  const [currentLocation, setCurrentLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [serviceRequests, setServiceRequests] = useState<ServiceRequest[]>([]);
   const [showServiceModal, setShowServiceModal] = useState(false);
-  const [myActiveService, setMyActiveService] = useState(null);
-  const webViewRef = useRef(null);
+  const [myActiveService, setMyActiveService] = useState<ServiceRequest | null>(null);
+  const [selectedService, setSelectedService] = useState<ServiceRequest | null>(null);
+  const [isLoadingMap, setIsLoadingMap] = useState(true);
+  const mapRef = useRef<MapView>(null);
 
   useEffect(() => {
-    loadLocationAndServices();
+    initializeMap();
+  }, []);
+
+  const initializeMap = async () => {
+    await loadLocationAndServices();
+    setIsLoadingMap(false);
     if (userRole === 'usuario') {
       checkMyActiveService();
     }
-  }, []);
+  };
 
   useEffect(() => {
-    // Si hay un servicio seleccionado desde el dashboard, actualizar
     if (selectedServiceFromDashboard) {
       loadLocationAndServices();
+      setSelectedService(selectedServiceFromDashboard);
     }
   }, [route.params?.selectedService]);
 
   const checkMyActiveService = async () => {
-    // Verificar si el usuario tiene un servicio activo
     const { data, error } = await supabase
       .from('service_requests')
       .select('*')
@@ -61,23 +79,40 @@ export default function HomeScreen() {
 
   const loadLocationAndServices = async () => {
     try {
-      // Obtener ubicación actual
+      // Ubicación por defecto (Bogotá, Colombia) para emulador/sin permisos
+      const defaultLocation = {
+        latitude: 4.7110,
+        longitude: -74.0721,
+      };
+
       const { status } = await Location.requestForegroundPermissionsAsync();
+      
       if (status === 'granted') {
-        const location = await Location.getCurrentPositionAsync({});
-        setCurrentLocation({
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude,
-        });
+        try {
+          const location = await Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.Balanced,
+            timeInterval: 10000,
+            distanceInterval: 10,
+          });
+          setCurrentLocation({
+            latitude: location.coords.latitude,
+            longitude: location.coords.longitude,
+          });
+          console.log('✅ Ubicación obtenida:', location.coords);
+        } catch (locError) {
+          console.log('⚠️ Error obteniendo ubicación, usando por defecto');
+          setCurrentLocation(defaultLocation);
+        }
+      } else {
+        console.log('⚠️ Permisos no concedidos, usando ubicación por defecto');
+        setCurrentLocation(defaultLocation);
       }
 
-      // Si hay un servicio seleccionado desde dashboard, mostrar solo ese
       if (selectedServiceFromDashboard) {
         setServiceRequests([selectedServiceFromDashboard]);
         return;
       }
 
-      // Obtener solo solicitudes de servicio en progreso
       const { data, error } = await supabase
         .from('service_requests')
         .select('*')
@@ -87,9 +122,15 @@ export default function HomeScreen() {
 
       if (!error && data) {
         setServiceRequests(data);
+        console.log('📍 Servicios cargados:', data.length);
       }
     } catch (error) {
-      console.error('Error loading data:', error);
+      console.error('❌ Error loading data:', error);
+      // Establecer ubicación por defecto en caso de cualquier error (Bogotá)
+      setCurrentLocation({
+        latitude: 4.7110,
+        longitude: -74.0721,
+      });
     }
   };
 
@@ -99,8 +140,6 @@ export default function HomeScreen() {
     const updates: any = { 
       status: 'in_progress',
       mechanic_id: user?.id,
-      mechanic_name: user?.email,
-      accepted_at: new Date().toISOString()
     };
 
     const { error } = await supabase
@@ -108,690 +147,494 @@ export default function HomeScreen() {
       .update(updates)
       .eq('id', selectedServiceFromDashboard.id);
 
-    if (!error) {
-      Alert.alert(
-        '✅ Servicio Aceptado',
-        'Has aceptado esta solicitud. Ahora aparece en "En Proceso"',
-        [
-          {
-            text: 'Entendido',
-            onPress: () => {
-              navigation.navigate('MechanicDashboard');
-            }
-          }
-        ]
-      );
-    } else {
-      Alert.alert('❌ Error', 'No se pudo aceptar el servicio');
-    }
-  };
-
-  const handleRequestAssistance = () => {
-    if (myActiveService) {
-      // Si ya tiene un servicio activo, mostrar detalles
-      Alert.alert(
-        '📋 Servicio Activo',
-        `Ya tienes un servicio "${myActiveService.service_name}" ${myActiveService.status === 'pending' ? 'pendiente' : 'en proceso'}.\n\nEstado: ${myActiveService.status === 'pending' ? '⏳ Esperando mecánico' : '🔧 Mecánico en camino'}`,
-        [{ text: 'Entendido' }]
-      );
-    } else {
-      // Mostrar modal de servicios
-      setShowServiceModal(true);
-    }
-  };
-
-  const emergencyServices = [
-    { id: 1, icon: 'battery-charging-full', name: 'Batería descargada', description: 'Arranque con cables o cambio de batería', type: 'emergency' },
-    { id: 2, icon: 'build-circle', name: 'Llanta ponchada', description: 'Cambio de neumático en el lugar', type: 'emergency' },
-    { id: 3, icon: 'warning', name: 'No arranca el motor', description: 'Diagnóstico y reparación básica', type: 'emergency' },
-    { id: 4, icon: 'local-fire-department', name: 'Sobrecalentamiento', description: 'Revisión del sistema de enfriamiento', type: 'emergency' },
-    { id: 5, icon: 'lock-open', name: 'Llaves dentro del auto', description: 'Apertura de vehículo sin daños', type: 'emergency' },
-  ];
-
-  const detailServices = [
-    { id: 6, icon: 'settings', name: 'Kit de distribución', description: 'Cambio completo de kit de distribución', type: 'detail' },
-    { id: 7, icon: 'water-drop', name: 'Cambio de aceite', description: 'Aceite y filtro de motor', type: 'detail' },
-    { id: 8, icon: 'build', name: 'Frenos', description: 'Cambio de pastillas o discos de freno', type: 'detail' },
-    { id: 9, icon: 'swap-vert', name: 'Suspensión', description: 'Reparación de amortiguadores', type: 'detail' },
-    { id: 10, icon: 'ac-unit', name: 'Aire acondicionado', description: 'Recarga y reparación de A/C', type: 'detail' },
-    { id: 11, icon: 'navigation', name: 'Alineación y balanceo', description: 'Servicio completo de alineación', type: 'detail' },
-  ];
-
-  const handleSelectService = async (service) => {
-    setShowServiceModal(false);
-    
-    const { data, error } = await createServiceRequest({
-      service_name: service.name,
-      service_description: service.description,
-      service_type: service.type,
-      service_icon: service.icon,
-      latitude: currentLocation?.latitude,
-      longitude: currentLocation?.longitude,
-    });
-
     if (error) {
-      Alert.alert('❌ Error', 'No se pudo registrar la solicitud.');
+      Alert.alert('Error', 'No se pudo aceptar el servicio');
+    } else {
+      Alert.alert('¡Éxito!', 'Has aceptado el servicio');
+      navigation.navigate('MechanicDashboard');
+    }
+  };
+
+  const handleCancelService = async () => {
+    Alert.alert(
+      'Cancelar Servicio',
+      '¿Estás seguro de que deseas cancelar este servicio?',
+      [
+        { text: 'No', style: 'cancel' },
+        {
+          text: 'Sí, cancelar',
+          style: 'destructive',
+          onPress: async () => {
+            if (!myActiveService) return;
+
+            const { error } = await supabase
+              .from('service_requests')
+              .update({ status: 'cancelled' })
+              .eq('id', myActiveService.id);
+
+            if (error) {
+              Alert.alert('Error', 'No se pudo cancelar el servicio');
+            } else {
+              setMyActiveService(null);
+              loadLocationAndServices();
+              Alert.alert('Servicio Cancelado', 'El servicio ha sido cancelado');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleSelectService = async (serviceType: string, description: string) => {
+    if (!currentLocation) {
+      Alert.alert('Error', 'No se pudo obtener tu ubicación');
       return;
     }
 
-    setMyActiveService(data[0]);
-    
-    // 🔔 Enviar notificación push a todos los mecánicos
-    await sendPushToMechanics(
-      '🔧 Nueva Solicitud de Servicio',
-      `${service.name} - Un cliente necesita asistencia`,
-      {
-        serviceId: data[0]?.id,
-        serviceName: service.name,
-        serviceType: service.type,
-      }
-    );
-    
-    Alert.alert(
-      '✅ Solicitud Enviada',
-      `${service.name}\n\nUn mecánico se pondrá en contacto contigo pronto.`,
-      [{ text: 'Aceptar' }]
-    );
-    loadLocationAndServices();
-    checkMyActiveService();
-  };
-
-  // Generar HTML dinámico con las ubicaciones reales
-  const generateMapHTML = () => {
-    const centerLat = currentLocation?.latitude || 4.7110;
-    const centerLng = currentLocation?.longitude || -74.0721;
-
-    // Generar código JavaScript para los marcadores de servicios
-    const serviceMarkers = serviceRequests.map((service, index) => {
-      const statusColor = '#10b981';
-      const statusText = 'En Progreso';
-      
-      return `
-const service${index} = L.marker([${service.latitude}, ${service.longitude}], { 
-  icon: L.divIcon({
-    className: 'custom-icon',
-    html: '<div style="background: white; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.3); border: 3px solid ${statusColor}; font-size: 18px;">👤</div>',
-    iconSize: [38, 38],
-    iconAnchor: [19, 19]
-  })
-}).addTo(map);
-
-service${index}.bindPopup(\`
-  <div class="user-popup-content">
-    <div class="user-popup-header">
-      <div class="user-avatar">👤</div>
-      <div class="user-info">
-        <div class="user-name">${service.user_email}</div>
-        <div class="status-badge status-in_progress">${statusText}</div>
-      </div>
-    </div>
-    <div class="service-info">
-      <div class="info-row">
-        <span class="info-label">Servicio:</span>
-        <span class="info-value">${service.service_name}</span>
-      </div>
-      ${service.service_description ? '<div class="info-row"><span class="info-label">Descripción:</span><span class="info-value">' + service.service_description + '</span></div>' : ''}
-      ${service.mechanic_name ? '<div class="info-row"><span class="info-label">Mecánico:</span><span class="info-value">🔧 ' + service.mechanic_name + '</span></div>' : ''}
-    </div>
-  </div>
-\`, {
-  className: 'white-popup',
-  maxWidth: 280
-});
-`;
-    }).join('\n');
-
-    return `<!DOCTYPE html>
-<html><head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<style>
-  body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-  #map { height: 100vh; width: 100vw; }
-  
-  /* Modal blanco para usuarios */
-  .white-popup .leaflet-popup-content-wrapper {
-    background: white;
-    border-radius: 16px;
-    padding: 0;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-  }
-  .white-popup .leaflet-popup-content {
-    margin: 0;
-    font-size: 14px;
-  }
-  .white-popup .leaflet-popup-tip {
-    background: white;
-  }
-  
-  .user-popup-content {
-    padding: 16px;
-  }
-  
-  .user-popup-header {
-    display: flex;
-    align-items: center;
-    margin-bottom: 12px;
-    padding-bottom: 12px;
-    border-bottom: 1px solid #e5e7eb;
-  }
-  
-  .user-avatar {
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 24px;
-    margin-right: 12px;
-    flex-shrink: 0;
-  }
-  
-  .user-info {
-    flex: 1;
-    min-width: 0;
-  }
-  
-  .user-name {
-    font-weight: 700;
-    font-size: 15px;
-    color: #1f2937;
-    margin-bottom: 4px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  
-  .status-badge {
-    display: inline-block;
-    padding: 4px 10px;
-    border-radius: 12px;
-    font-size: 12px;
-    font-weight: 600;
-  }
-  
-  .status-pending {
-    background: #fef3c7;
-    color: #d97706;
-  }
-  
-  .status-in_progress {
-    background: #d1fae5;
-    color: #059669;
-  }
-  
-  .service-info {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-  
-  .info-row {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  }
-  
-  .info-label {
-    font-size: 11px;
-    font-weight: 600;
-    color: #6b7280;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-  
-  .info-value {
-    font-size: 14px;
-    color: #1f2937;
-    font-weight: 500;
-  }
-  
-  /* Popup de ubicación actual */
-  .user-popup .leaflet-popup-content-wrapper {
-    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-    color: white;
-    border-radius: 16px;
-    padding: 4px;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
-  }
-  .user-popup .leaflet-popup-content {
-    margin: 12px 16px;
-    font-size: 14px;
-    line-height: 1.5;
-  }
-  .user-popup .leaflet-popup-tip {
-    background: #2563eb;
-  }
-  .popup-title {
-    font-weight: 700;
-    font-size: 15px;
-    margin-bottom: 4px;
-  }
-  .popup-detail {
-    font-size: 13px;
-    opacity: 0.95;
-    line-height: 1.6;
-  }
-  
-  /* Estilo para la ruta */
-  .route-line {
-    color: #7aea66ff;
-    weight: 8;
-    opacity: 0.7;
-  }
-</style>
-</head><body><div id="map"></div>
-<script>
-const map = L.map('map', {
-  zoomControl: true,
-  attributionControl: true
-}).setView([${centerLat}, ${centerLng}], 13);
-
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  attribution: '© OpenStreetMap',
-  maxZoom: 19
-}).addTo(map);
-
-${currentLocation ? `
-const userIcon = L.divIcon({
-  className: 'custom-icon',
-  html: '<div style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(59,130,246,0.5); border: 3px solid white; font-size: 20px;">📍</div>',
-  iconSize: [40, 40],
-  iconAnchor: [20, 20]
-});
-
-const userMarker = L.marker([${centerLat}, ${centerLng}], { icon: userIcon }).addTo(map);
-userMarker.bindPopup('<div class="popup-title">📍 Tu Ubicación</div><div class="popup-detail">Ubicación actual</div>', {
-  className: 'user-popup'
-}).openPopup();
-` : ''}
-
-${serviceMarkers}
-
-${currentLocation && serviceRequests.length > 0 ? `
-// Dibujar rutas desde la ubicación actual a cada servicio
-${serviceRequests.map((service, index) => `
-fetch('https://router.project-osrm.org/route/v1/driving/${centerLng},${centerLat};${service.longitude},${service.latitude}?overview=full&geometries=geojson')
-  .then(response => response.json())
-  .then(data => {
-    if (data.routes && data.routes[0]) {
-      const route = data.routes[0];
-      const coordinates = route.geometry.coordinates.map(coord => [coord[1], coord[0]]);
-      
-      L.polyline(coordinates, {
-        color: '#ffd500ff',
-        weight: 8,
-        opacity: 0.7,
-        lineJoin: 'round',
-        lineCap: 'round'
-      }).addTo(map);
-      
-      // Enviar información de ruta al componente React Native
-      const distance = (route.distance / 1000).toFixed(1);
-      const duration = Math.round(route.duration / 60);
-      
-      window.ReactNativeWebView.postMessage(JSON.stringify({
-        type: 'routeInfo',
-        distance: distance,
-        duration: duration
-      }));
-      
-      console.log('Ruta ${index}: ' + distance + ' km, ' + duration + ' min');
-    }
-  })
-  .catch(err => console.error('Error obteniendo ruta:', err));
-`).join('\n')}
-` : ''}
-
-${serviceRequests.length > 0 ? `
-// Ajustar vista para mostrar todos los marcadores
-const bounds = L.latLngBounds([
-  ${currentLocation ? `[${centerLat}, ${centerLng}],` : ''}
-  ${serviceRequests.map(s => `[${s.latitude}, ${s.longitude}]`).join(',\n  ')}
-]);
-map.fitBounds(bounds, { padding: [50, 50] });
-` : ''}
-</script></body></html>`;
-  };
-
-  const htmlContent = generateMapHTML();
-
-  const handleWebViewMessage = (event) => {
     try {
-      const data = JSON.parse(event.nativeEvent.data);
-      if (data.type === 'routeInfo') {
-        setRouteInfo({
-          distance: data.distance,
-          duration: data.duration
-        });
+      const serviceData = {
+        service_name: serviceType,
+        service_description: description,
+        service_type: 'emergency' as const, // Todos los servicios de mecánico son de emergencia
+        service_icon: getServiceIcon(serviceType),
+        latitude: currentLocation.latitude,
+        longitude: currentLocation.longitude,
+      };
+
+      const { data, error } = await createServiceRequest(serviceData);
+
+      if (error) {
+        Alert.alert('Error', 'No se pudo crear la solicitud');
+        return;
       }
+
+      // Enviar notificación push a mecánicos
+      await sendPushToMechanics(
+        '🚨 Nueva Solicitud de Servicio',
+        `Servicio: ${serviceType}${description ? ' - ' + description : ''}`,
+        { serviceId: data.id, type: serviceType }
+      );
+
+      Alert.alert(
+        '¡Solicitud Creada!',
+        'Un mecánico cercano será notificado',
+        [{ text: 'OK', onPress: () => {
+          setShowServiceModal(false);
+          checkMyActiveService();
+        }}]
+      );
     } catch (error) {
-      console.error('Error parsing message:', error);
+      console.error('Error creating service:', error);
+      Alert.alert('Error', 'Ocurrió un error al crear la solicitud');
     }
+  };
+
+  const getServiceIcon = (serviceType: string): string => {
+    const icons: { [key: string]: string } = {
+      'Cambio de Llanta': '🔧',
+      'Batería Descargada': '🔋',
+      'Falta de Gasolina': '⛽',
+      'Remolque': '🚗',
+      'Revisión General': '🔍',
+      'Otro': '💡',
+    };
+    return icons[serviceType] || '🔧';
+  };
+
+  const centerOnMyLocation = () => {
+    if (currentLocation && mapRef.current) {
+      mapRef.current.animateToRegion({
+        latitude: currentLocation.latitude,
+        longitude: currentLocation.longitude,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      }, 1000);
+    }
+  };
+
+  const getMarkerColor = (service: ServiceRequest) => {
+    if (service.status === 'pending') return '#f59e0b';
+    if (service.status === 'in_progress') return '#10b981';
+    return '#6b7280';
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-      {loading && (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#3b82f6" />
-        </View>
-      )}
-      <WebView
-        ref={webViewRef}
-        originWhitelist={['*']}
-        source={{ html: htmlContent }}
-        style={styles.webview}
-        javaScriptEnabled={true}
-        onLoadEnd={() => setLoading(false)}
-        onMessage={handleWebViewMessage}
-        key={serviceRequests.length} // Forzar recarga cuando cambien los servicios
-      />
-      
-      {/* Mostrar información de ruta */}
-      {routeInfo && isMecanico(userRole) && (
-        <View style={styles.routeInfoContainer}>
-          <MaterialIcons name="directions-car" size={20} color="#fff" />
-          <Text style={styles.routeInfoText}>
-            {routeInfo.distance} km · {routeInfo.duration} min
-          </Text>
-        </View>
-      )}
-      
-      <View style={styles.locationButtons}>
-        {/* Botones cuando se está viendo un servicio específico desde el dashboard */}
-        {selectedServiceFromDashboard && isMecanico(userRole) && (
-          <>
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>🔧 Mecánicos Cerca</Text>
+        <View style={styles.headerButtons}>
+          {isMecanico(userRole) && (
             <TouchableOpacity 
-              style={[styles.locationBtn, styles.backToListBtn]}
-              onPress={() => {
-                navigation.navigate('MechanicDashboard');
-              }}
+              style={styles.dashboardBtn}
+              onPress={() => navigation.navigate('MechanicDashboard')}
             >
-              <MaterialIcons name="arrow-back" size={20} color="#fff" style={{ marginRight: 8 }} />
-              <Text style={styles.btnText}>Volver</Text>
+              <MaterialIcons name="dashboard" size={24} color="#fff" />
             </TouchableOpacity>
+          )}
+          <TouchableOpacity 
+            style={styles.profileBtn}
+            onPress={() => navigation.navigate('Profile')}
+          >
+            <MaterialIcons name="person" size={24} color="#fff" />
+          </TouchableOpacity>
+        </View>
+      </View>
 
-            {selectedServiceFromDashboard.status === 'pending' && (
-              <TouchableOpacity 
-                style={[styles.locationBtn, styles.acceptBtn]}
-                onPress={handleAcceptService}
-              >
-                <MaterialIcons name="check-circle" size={20} color="#fff" style={{ marginRight: 8 }} />
-                <Text style={styles.btnText}>Aceptar</Text>
-              </TouchableOpacity>
-            )}
-          </>
+      <View style={styles.mapContainer}>
+        {currentLocation ? (
+          <MapView
+            ref={mapRef}
+            provider={PROVIDER_GOOGLE}
+            style={styles.map}
+            initialRegion={{
+              latitude: currentLocation.latitude,
+              longitude: currentLocation.longitude,
+              latitudeDelta: 0.01,
+              longitudeDelta: 0.01,
+            }}
+            showsUserLocation
+            showsMyLocationButton={false}
+            showsTraffic={false}
+            showsBuildings={true}
+            showsIndoors={true}
+            loadingEnabled={true}
+            loadingIndicatorColor="#3b82f6"
+            loadingBackgroundColor="#f9fafb"
+          >
+            {/* Marcadores de servicios */}
+            {serviceRequests.map((service) => (
+              <Marker
+                key={service.id}
+                coordinate={{
+                  latitude: service.latitude,
+                  longitude: service.longitude,
+                }}
+                pinColor={getMarkerColor(service)}
+                title={service.service_type}
+                description={service.description || 'Sin descripción'}
+                onPress={() => setSelectedService(service)}
+              />
+            ))}
+          </MapView>
+        ) : (
+          <View style={styles.loadingContainer}>
+            <Text style={styles.loadingText}>🗺️ Cargando mapa de Google...</Text>
+            <Text style={styles.loadingSubtext}>
+              {isLoadingMap ? 'Obteniendo tu ubicación...' : 'Casi listo...'}
+            </Text>
+          </View>
         )}
 
-        {/* Botón para clientes: Solicitar Mecánico (solo cuando NO hay servicio seleccionado) */}
-        {!selectedServiceFromDashboard && userRole === 'usuario' && (
+        {/* Botón para centrar en mi ubicación */}
+        <TouchableOpacity 
+          style={styles.myLocationBtn}
+          onPress={centerOnMyLocation}
+        >
+          <MaterialIcons name="my-location" size={24} color="#1f2937" />
+        </TouchableOpacity>
+
+        {/* Botón flotante para solicitar servicio (solo usuarios) */}
+        {!isMecanico(userRole) && !myActiveService && (
           <TouchableOpacity 
-            style={styles.locationBtn}
-            onPress={handleRequestAssistance}
+            style={styles.floatingBtn}
+            onPress={() => setShowServiceModal(true)}
           >
-            <MaterialIcons name="build" size={20} color="#fff" style={{ marginRight: 8 }} />
-            <Text style={styles.btnText}>Solicitar Mecánico</Text>
+            <MaterialIcons name="build" size={28} color="#fff" />
+            <Text style={styles.floatingBtnText}>Solicitar Servicio</Text>
           </TouchableOpacity>
         )}
 
-        {/* Botón Ver Solicitudes (solo cuando NO hay servicio seleccionado) */}
-        {!selectedServiceFromDashboard && isMecanico(userRole) && (
-          <TouchableOpacity 
-            style={[styles.locationBtn, styles.mechanicBtn]}
-            onPress={() => navigation.navigate('MechanicDashboard')}
-          >
-            <MaterialIcons name="assignment" size={20} color="#fff" style={{ marginRight: 8 }} />
-            <Text style={styles.btnText}>Ver Solicitudes</Text>
-          </TouchableOpacity>
+        {/* Banner de servicio activo */}
+        {myActiveService && (
+          <View style={styles.activeBanner}>
+            <View style={styles.activeBannerContent}>
+              <MaterialIcons name="build-circle" size={24} color="#10b981" />
+              <View style={styles.activeBannerText}>
+                <Text style={styles.activeBannerTitle}>
+                  Servicio {myActiveService.status === 'pending' ? 'Pendiente' : 'En Progreso'}
+                </Text>
+                <Text style={styles.activeBannerSubtitle}>
+                  {myActiveService.service_type}
+                </Text>
+              </View>
+            </View>
+            <TouchableOpacity onPress={handleCancelService}>
+              <MaterialIcons name="close" size={24} color="#ef4444" />
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Banner de servicio seleccionado desde dashboard (mecánico) */}
+        {selectedServiceFromDashboard && isMecanico(userRole) && (
+          <View style={styles.serviceDetailBanner}>
+            <View style={styles.serviceDetailContent}>
+              <Text style={styles.serviceDetailTitle}>
+                {selectedServiceFromDashboard.service_type}
+              </Text>
+              <Text style={styles.serviceDetailDesc}>
+                {selectedServiceFromDashboard.description || 'Sin descripción'}
+              </Text>
+            </View>
+            <TouchableOpacity 
+              style={styles.acceptBtn}
+              onPress={handleAcceptService}
+            >
+              <Text style={styles.acceptBtnText}>Aceptar Servicio</Text>
+            </TouchableOpacity>
+          </View>
         )}
       </View>
 
-      <TouchableOpacity 
-        style={styles.settingsBtn}
-        onPress={() => navigation.navigate('Profile')}
-      >
-        <MaterialIcons name="settings" size={28} color="#667eea" />
-      </TouchableOpacity>
-
-      {/* Modal de Servicios */}
+      {/* Modal de selección de servicio */}
       <Modal
         visible={showServiceModal}
         animationType="slide"
-        transparent={false}
+        transparent={true}
         onRequestClose={() => setShowServiceModal(false)}
       >
-        <SafeAreaView style={styles.modalContainer} edges={['top', 'left', 'right', 'bottom']}>
-          <View style={styles.modalHeader}>
-            <TouchableOpacity style={styles.backBtn} onPress={() => setShowServiceModal(false)}>
-              <MaterialIcons name="close" size={24} color="#1f2937" />
-            </TouchableOpacity>
-            <Text style={styles.modalTitle}>🔧 Solicitar Servicio</Text>
-            <View style={{ width: 50 }} />
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>¿Qué servicio necesitas?</Text>
+              <TouchableOpacity onPress={() => setShowServiceModal(false)}>
+                <MaterialIcons name="close" size={24} color="#6b7280" />
+              </TouchableOpacity>
+            </View>
+            
+            <ScrollView style={styles.serviceList}>
+              {[
+                { type: 'Cambio de Llanta', icon: '🔧', desc: 'Cambio o reparación de llantas' },
+                { type: 'Batería Descargada', icon: '🔋', desc: 'Auxilio con batería' },
+                { type: 'Falta de Gasolina', icon: '⛽', desc: 'Servicio de gasolina' },
+                { type: 'Remolque', icon: '🚗', desc: 'Servicio de grúa' },
+                { type: 'Revisión General', icon: '🔍', desc: 'Diagnóstico del vehículo' },
+                { type: 'Otro', icon: '💡', desc: 'Otro tipo de servicio' },
+              ].map((service, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={styles.serviceOption}
+                  onPress={() => handleSelectService(service.type, service.desc)}
+                >
+                  <Text style={styles.serviceIcon}>{service.icon}</Text>
+                  <View style={styles.serviceInfo}>
+                    <Text style={styles.serviceName}>{service.type}</Text>
+                    <Text style={styles.serviceDesc}>{service.desc}</Text>
+                  </View>
+                  <MaterialIcons name="chevron-right" size={24} color="#9ca3af" />
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
           </View>
-
-          <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
-            <View style={styles.categorySection}>
-              <Text style={styles.categoryTitle}>🚨 Servicios de Emergencia</Text>
-              <Text style={styles.categorySubtitle}>Atención inmediata en el lugar</Text>
-              {emergencyServices.map((service) => (
-                <TouchableOpacity
-                  key={service.id}
-                  style={styles.serviceCard}
-                  onPress={() => handleSelectService(service)}
-                >
-                  <View style={styles.serviceIconContainer}>
-                    <MaterialIcons name={service.icon as any} size={28} color="#667eea" />
-                  </View>
-                  <View style={styles.serviceInfo}>
-                    <Text style={styles.serviceName}>{service.name}</Text>
-                    <Text style={styles.serviceDescription}>{service.description}</Text>
-                  </View>
-                  <MaterialIcons name="chevron-right" size={32} color="#9ca3af" />
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            <View style={styles.categorySection}>
-              <Text style={styles.categoryTitle}>⚙️ Servicios Detallados</Text>
-              <Text style={styles.categorySubtitle}>Reparaciones y mantenimiento completo</Text>
-              {detailServices.map((service) => (
-                <TouchableOpacity
-                  key={service.id}
-                  style={styles.serviceCard}
-                  onPress={() => handleSelectService(service)}
-                >
-                  <View style={styles.serviceIconContainer}>
-                    <MaterialIcons name={service.icon as any} size={28} color="#667eea" />
-                  </View>
-                  <View style={styles.serviceInfo}>
-                    <Text style={styles.serviceName}>{service.name}</Text>
-                    <Text style={styles.serviceDescription}>{service.description}</Text>
-                  </View>
-                  <MaterialIcons name="chevron-right" size={32} color="#9ca3af" />
-                </TouchableOpacity>
-              ))}
-            </View>
-            <View style={{ height: 40 }} />
-          </ScrollView>
-        </SafeAreaView>
+        </View>
       </Modal>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  webview: { flex: 1 },
-  loadingContainer: {
-    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-    justifyContent: 'center', alignItems: 'center',
-    backgroundColor: '#fff', zIndex: 1000,
+  container: {
+    flex: 1,
+    backgroundColor: '#f9fafb',
   },
-  routeInfoContainer: {
-    position: 'absolute',
-    bottom: 110,
-    left: 125,
-    backgroundColor: '#ffd500',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
+  header: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    gap: 6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-    maxWidth: '50%',
+    padding: 16,
+    backgroundColor: '#1f2937',
   },
-  routeInfoText: {
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
     color: '#fff',
-    fontWeight: '700',
-    fontSize: 13,
-    letterSpacing: 0.2,
   },
-  locationButtons: {
-    position: 'absolute',
-    bottom: 40,
-    left: 0,
-    right: 0,
+  headerButtons: {
     flexDirection: 'row',
-    justifyContent: 'center',
-    paddingHorizontal: 20,
     gap: 12,
   },
-  locationBtn: {
-    backgroundColor: '#667eea',
-    paddingHorizontal: 32,
-    paddingVertical: 16,
-    borderRadius: 35,
-    shadowColor: '#667eea',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    elevation: 8,
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.3)',
-    flexDirection: 'row',
-    alignItems: 'center',
+  dashboardBtn: {
+    backgroundColor: '#3b82f6',
+    borderRadius: 8,
+    padding: 8,
   },
-  mechanicBtn: {
-    backgroundColor: '#10b981',
-    shadowColor: '#10b981',
+  profileBtn: {
+    backgroundColor: '#6366f1',
+    borderRadius: 8,
+    padding: 8,
   },
-  acceptBtn: {
-    backgroundColor: '#10b981',
-    shadowColor: '#10b981',
-  },
-  backToListBtn: {
-    backgroundColor: '#6b7280',
-    shadowColor: '#6b7280',
-  },
-  btnText: {
-    color: '#fff',
-    fontWeight: '800',
-    fontSize: 16,
-    letterSpacing: 0.5,
-  },
-  settingsBtn: {
-    position: 'absolute',
-    top: 50,
-    right: 20,
-    backgroundColor: '#fff',
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  backToDashboardBtn: {
-    position: 'absolute',
-    top: 50,
-    left: 20,
-    backgroundColor: '#fff',
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  modalContainer: {
+  mapContainer: {
     flex: 1,
-    backgroundColor: '#fff',
+    position: 'relative',
   },
-  modalHeader: {
+  map: {
+    width: width,
+    height: '100%',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f9fafb',
+    padding: 20,
+  },
+  loadingText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1f2937',
+    marginBottom: 8,
+  },
+  loadingSubtext: {
+    fontSize: 14,
+    color: '#6b7280',
+  },
+  myLocationBtn: {
+    position: 'absolute',
+    bottom: 120,
+    right: 16,
+    backgroundColor: '#fff',
+    borderRadius: 30,
+    padding: 12,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  floatingBtn: {
+    position: 'absolute',
+    bottom: 30,
+    left: 20,
+    right: 20,
+    backgroundColor: '#3b82f6',
+    borderRadius: 12,
+    padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: 16,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    justifyContent: 'center',
+    gap: 10,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: '800',
+  floatingBtnText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  activeBanner: {
+    position: 'absolute',
+    top: 16,
+    left: 16,
+    right: 16,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+  },
+  activeBannerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  activeBannerText: {
+    flex: 1,
+  },
+  activeBannerTitle: {
+    fontSize: 14,
+    fontWeight: '600',
     color: '#1f2937',
   },
-  backBtn: {
-    width: 50,
-    height: 50,
-    justifyContent: 'center',
-    alignItems: 'center',
+  activeBannerSubtitle: {
+    fontSize: 12,
+    color: '#6b7280',
   },
-  modalContent: {
-    flex: 1,
-    paddingHorizontal: 20,
+  serviceDetailBanner: {
+    position: 'absolute',
+    bottom: 20,
+    left: 16,
+    right: 16,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
-  categorySection: {
-    marginTop: 24,
-    marginBottom: 16,
+  serviceDetailContent: {
+    marginBottom: 12,
   },
-  categoryTitle: {
+  serviceDetailTitle: {
     fontSize: 18,
     fontWeight: '700',
     color: '#1f2937',
     marginBottom: 4,
   },
-  categorySubtitle: {
-    fontSize: 13,
+  serviceDetailDesc: {
+    fontSize: 14,
     color: '#6b7280',
-    marginBottom: 12,
   },
-  serviceCard: {
+  acceptBtn: {
+    backgroundColor: '#10b981',
+    borderRadius: 8,
+    padding: 14,
+    alignItems: 'center',
+  },
+  acceptBtnText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1f2937',
+  },
+  serviceList: {
+    padding: 16,
+  },
+  serviceOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f9fafb',
-    borderRadius: 16,
     padding: 16,
+    backgroundColor: '#f9fafb',
+    borderRadius: 12,
     marginBottom: 12,
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: '#e5e7eb',
   },
-  serviceIconContainer: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: '#f0f4ff',
-    justifyContent: 'center',
-    alignItems: 'center',
+  serviceIcon: {
+    fontSize: 32,
     marginRight: 16,
   },
   serviceInfo: {
@@ -799,11 +642,11 @@ const styles = StyleSheet.create({
   },
   serviceName: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#1f2937',
-    marginBottom: 4,
+    marginBottom: 2,
   },
-  serviceDescription: {
+  serviceDesc: {
     fontSize: 13,
     color: '#6b7280',
   },
