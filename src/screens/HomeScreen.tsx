@@ -46,6 +46,8 @@ export default function HomeScreen() {
   const [routeDistance, setRouteDistance] = useState<string>('');
   const [routeDuration, setRouteDuration] = useState<string>('');
   const [mechanicLocation, setMechanicLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  // Estado local para mantener el servicio actualizado (mecánico)
+  const [activeServiceForMechanic, setActiveServiceForMechanic] = useState<ServiceRequest | null>(null);
   const mapRef = useRef<MapView>(null);
 
   useEffect(() => {
@@ -64,6 +66,7 @@ export default function HomeScreen() {
     if (selectedServiceFromDashboard) {
       loadLocationAndServices();
       setSelectedService(selectedServiceFromDashboard);
+      setActiveServiceForMechanic(selectedServiceFromDashboard);
     }
   }, [route.params?.selectedService]);
 
@@ -110,6 +113,24 @@ export default function HomeScreen() {
         };
       }
     }
+  };
+
+  // Verificar si el mecánico ya tiene un servicio activo
+  const checkMechanicHasActiveService = async (): Promise<boolean> => {
+    if (!user) return false;
+    
+    const { data, error } = await supabase
+      .from('service_requests')
+      .select('id, status, service_type')
+      .eq('mechanic_id', user.id)
+      .in('status', ['accepted', 'arrived', 'in_progress'])
+      .limit(1);
+    
+    if (!error && data && data.length > 0) {
+      console.log('⚠️ Mecánico ya tiene servicio activo:', data[0]);
+      return true;
+    }
+    return false;
   };
 
   const loadLocationAndServices = async () => {
@@ -173,6 +194,17 @@ export default function HomeScreen() {
     if (!selectedServiceFromDashboard || !user) return;
 
     try {
+      // Verificar si ya tiene un servicio activo
+      const hasActiveService = await checkMechanicHasActiveService();
+      if (hasActiveService) {
+        Alert.alert(
+          '⚠️ Servicio Activo',
+          'Ya tienes un servicio en progreso. Complétalo antes de aceptar otro.',
+          [{ text: 'Entendido' }]
+        );
+        return;
+      }
+
       // 1. Actualizar estado a 'accepted' (mecánico en camino)
       const { error } = await supabase
         .from('service_requests')
@@ -190,7 +222,14 @@ export default function HomeScreen() {
       // 2. Iniciar tracking GPS del mecánico
       await startMechanicTracking(selectedServiceFromDashboard.id, user.id);
 
-      // 3. Enviar notificación al cliente
+      // 3. Actualizar estado local
+      setActiveServiceForMechanic({
+        ...selectedServiceFromDashboard,
+        status: 'accepted',
+        mechanic_id: user.id,
+      });
+
+      // 4. Enviar notificación al cliente
       // TODO: Implementar sendPushToUser() para notificar al cliente
       
       Alert.alert(
@@ -226,6 +265,11 @@ export default function HomeScreen() {
           onPress: async () => {
             try {
               await updateServiceStatus(selectedServiceFromDashboard.id, 'arrived');
+              setActiveServiceForMechanic({
+                ...selectedServiceFromDashboard,
+                status: 'arrived',
+                mechanic_id: user?.id,
+              });
               Alert.alert('✅ Llegada Confirmada', 'El cliente ha sido notificado');
               // TODO: Enviar push al cliente
             } catch (error) {
@@ -242,6 +286,11 @@ export default function HomeScreen() {
 
     try {
       await updateServiceStatus(selectedServiceFromDashboard.id, 'in_progress');
+      setActiveServiceForMechanic({
+        ...selectedServiceFromDashboard,
+        status: 'in_progress',
+        mechanic_id: user?.id,
+      });
       Alert.alert('🔧 Servicio Iniciado', 'Puedes comenzar a trabajar en el vehículo');
     } catch (error) {
       Alert.alert('Error', 'No se pudo actualizar el estado');
@@ -262,6 +311,11 @@ export default function HomeScreen() {
             try {
               await updateServiceStatus(selectedServiceFromDashboard.id, 'completed');
               await stopMechanicTracking();
+              // Limpiar el marcador del mecánico
+              setMechanicLocation(null);
+              setRouteCoordinates([]);
+              setRouteDistance('');
+              setRouteDuration('');
               Alert.alert(
                 '🎉 Servicio Completado',
                 'El cliente puede calificar tu trabajo',
@@ -269,6 +323,58 @@ export default function HomeScreen() {
               );
             } catch (error) {
               Alert.alert('Error', 'No se pudo completar el servicio');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  // Función para que el mecánico cancele el servicio
+  const handleMechanicCancelService = async () => {
+    if (!selectedServiceFromDashboard) return;
+
+    Alert.alert(
+      '⚠️ Cancelar Servicio',
+      '¿Estás seguro? Esto afectará tu calificación y el cliente será notificado.',
+      [
+        { text: 'No', style: 'cancel' },
+        {
+          text: 'Sí, cancelar',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              // Detener tracking GPS
+              await stopMechanicTracking();
+              
+              // Actualizar servicio a cancelado y liberar al mecánico
+              const { error } = await supabase
+                .from('service_requests')
+                .update({ 
+                  status: 'cancelled',
+                  mechanic_id: null, // Liberar el servicio
+                })
+                .eq('id', selectedServiceFromDashboard.id);
+
+              if (error) {
+                Alert.alert('Error', 'No se pudo cancelar el servicio');
+                return;
+              }
+
+              // Limpiar estados locales
+              setMechanicLocation(null);
+              setRouteCoordinates([]);
+              setRouteDistance('');
+              setRouteDuration('');
+
+              Alert.alert(
+                'Servicio Cancelado',
+                'El servicio ha sido liberado y puedes aceptar otro.',
+                [{ text: 'OK', onPress: () => navigation.navigate('MechanicDashboard') }]
+              );
+            } catch (error) {
+              console.error('Error cancelando servicio:', error);
+              Alert.alert('Error', 'Ocurrió un problema al cancelar');
             }
           }
         }
@@ -297,6 +403,11 @@ export default function HomeScreen() {
               Alert.alert('Error', 'No se pudo cancelar el servicio');
             } else {
               setMyActiveService(null);
+              // Limpiar el marcador del mecánico y la ruta
+              setMechanicLocation(null);
+              setRouteCoordinates([]);
+              setRouteDistance('');
+              setRouteDuration('');
               loadLocationAndServices();
               Alert.alert('Servicio Cancelado', 'El servicio ha sido cancelado');
             }
@@ -597,14 +708,14 @@ export default function HomeScreen() {
         )}
 
         {/* Banner de servicio seleccionado desde dashboard (mecánico) */}
-        {selectedServiceFromDashboard && isMecanico(userRole) && (
+        {activeServiceForMechanic && isMecanico(userRole) && (
           <View style={styles.serviceDetailBanner}>
             <View style={styles.serviceDetailContent}>
               <Text style={styles.serviceDetailTitle}>
-                {selectedServiceFromDashboard.service_type}
+                {activeServiceForMechanic.service_type}
               </Text>
               <Text style={styles.serviceDetailDesc}>
-                {selectedServiceFromDashboard.description || 'Sin descripción'}
+                {activeServiceForMechanic.description || 'Sin descripción'}
               </Text>
               {routeDistance && routeDuration && (
                 <View style={styles.routeInfo}>
@@ -621,43 +732,73 @@ export default function HomeScreen() {
             </View>
 
             {/* Botones según el estado del servicio */}
-            {selectedServiceFromDashboard.status === 'pending' && (
-              <TouchableOpacity 
-                style={styles.acceptBtn}
-                onPress={handleAcceptService}
-              >
-                <Text style={styles.acceptBtnText}>Aceptar Servicio</Text>
-              </TouchableOpacity>
-            )}
-
-            {selectedServiceFromDashboard.status === 'accepted' && (
-              <View style={{ gap: 8 }}>
+            <View style={{ gap: 8, marginTop: 12 }}>
+              {activeServiceForMechanic.status === 'pending' && (
                 <TouchableOpacity 
-                  style={[styles.acceptBtn, { backgroundColor: '#f59e0b' }]}
-                  onPress={handleArrived}
+                  style={styles.acceptBtn}
+                  onPress={handleAcceptService}
                 >
-                  <Text style={styles.acceptBtnText}>📍 He Llegado</Text>
+                  <Text style={styles.acceptBtnText}>✅ Aceptar Servicio</Text>
                 </TouchableOpacity>
-              </View>
-            )}
+              )}
 
-            {selectedServiceFromDashboard.status === 'arrived' && (
-              <TouchableOpacity 
-                style={[styles.acceptBtn, { backgroundColor: '#3b82f6' }]}
-                onPress={handleStartWork}
-              >
-                <Text style={styles.acceptBtnText}>🔧 Iniciar Trabajo</Text>
-              </TouchableOpacity>
-            )}
+              {activeServiceForMechanic.status === 'accepted' && (
+                <>
+                  <TouchableOpacity 
+                    style={[styles.acceptBtn, { backgroundColor: '#f59e0b' }]}
+                    onPress={handleArrived}
+                  >
+                    <Text style={styles.acceptBtnText}>📍 He Llegado</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={[styles.acceptBtn, { backgroundColor: '#ef4444' }]}
+                    onPress={handleMechanicCancelService}
+                  >
+                    <Text style={styles.acceptBtnText}>❌ Cancelar Servicio</Text>
+                  </TouchableOpacity>
+                </>
+              )}
 
-            {selectedServiceFromDashboard.status === 'in_progress' && (
-              <TouchableOpacity 
-                style={[styles.acceptBtn, { backgroundColor: '#10b981' }]}
-                onPress={handleCompleteService}
-              >
-                <Text style={styles.acceptBtnText}>✅ Completar Servicio</Text>
-              </TouchableOpacity>
-            )}
+              {activeServiceForMechanic.status === 'arrived' && (
+                <>
+                  <TouchableOpacity 
+                    style={[styles.acceptBtn, { backgroundColor: '#3b82f6' }]}
+                    onPress={handleStartWork}
+                  >
+                    <Text style={styles.acceptBtnText}>🔧 Iniciar Trabajo</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={[styles.acceptBtn, { backgroundColor: '#ef4444' }]}
+                    onPress={handleMechanicCancelService}
+                  >
+                    <Text style={styles.acceptBtnText}>❌ Cancelar</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+
+              {activeServiceForMechanic.status === 'in_progress' && (
+                <>
+                  <TouchableOpacity 
+                    style={[styles.acceptBtn, { backgroundColor: '#10b981' }]}
+                    onPress={handleCompleteService}
+                  >
+                    <Text style={styles.acceptBtnText}>✅ Completar Servicio</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={[styles.acceptBtn, { backgroundColor: '#6b7280' }]}
+                    onPress={() => {
+                      Alert.alert(
+                        'ℹ️ Información del Servicio',
+                        `Tipo: ${activeServiceForMechanic.service_type}\n\nDescripción: ${activeServiceForMechanic.description || 'Sin descripción'}\n\nEstado: Trabajando en el vehículo`,
+                        [{ text: 'OK' }]
+                      );
+                    }}
+                  >
+                    <Text style={styles.acceptBtnText}>ℹ️ Más Info</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+            </View>
           </View>
         )}
       </View>
