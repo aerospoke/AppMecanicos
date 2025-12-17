@@ -351,7 +351,7 @@ export default function HomeScreen() {
               const { error } = await supabase
                 .from('service_requests')
                 .update({ 
-                  status: 'cancelled',
+                  status: 'pending',
                   mechanic_id: null, // Liberar el servicio
                 })
                 .eq('id', selectedServiceFromDashboard.id);
