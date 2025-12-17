@@ -75,7 +75,11 @@ export default function MechanicDashboardScreen() {
       case 'pending':
         return requests.filter(r => r.status === 'pending');
       case 'in_progress':
-        return requests.filter(r => r.status === 'in_progress');
+        // Incluir todos los estados activos del mecánico actual
+        return requests.filter(r => 
+          (r.status === 'accepted' || r.status === 'arrived' || r.status === 'in_progress') && 
+          r.mechanic_id === user?.id
+        );
       case 'completed':
         // Solo mostrar los completados por el mecánico actual
         return requests.filter(r => 
@@ -89,7 +93,9 @@ export default function MechanicDashboardScreen() {
   const getStatusColor = (status) => {
     switch (status) {
       case 'pending': return '#f59e0b';
-      case 'in_progress': return '#3b82f6';
+      case 'accepted': return '#3b82f6'; // Azul - En camino
+      case 'arrived': return '#f59e0b'; // Naranja - Llegó
+      case 'in_progress': return '#8b5cf6'; // Morado - Trabajando
       case 'completed': return '#10b981';
       case 'cancelled': return '#ef4444';
       default: return '#6b7280';
@@ -99,7 +105,9 @@ export default function MechanicDashboardScreen() {
   const getStatusText = (status) => {
     switch (status) {
       case 'pending': return 'Pendiente';
-      case 'in_progress': return 'En Proceso';
+      case 'accepted': return '🚗 En Camino';
+      case 'arrived': return '📍 He Llegado';
+      case 'in_progress': return '🔧 Trabajando';
       case 'completed': return 'Completado';
       case 'cancelled': return 'Cancelado';
       default: return status;
@@ -175,7 +183,10 @@ export default function MechanicDashboardScreen() {
               </View>
               <View style={[styles.badge, activeTab === 'in_progress' && styles.badgeActive]}>
                 <Text style={[styles.badgeText, activeTab === 'in_progress' && styles.badgeTextActive]}>
-                  {requests.filter(r => r.status === 'in_progress').length}
+                  {requests.filter(r => 
+                    (r.status === 'accepted' || r.status === 'arrived' || r.status === 'in_progress') && 
+                    r.mechanic_id === user?.id
+                  ).length}
                 </Text>
               </View>
             </TouchableOpacity>
