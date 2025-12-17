@@ -314,24 +314,6 @@ export default function MechanicDashboardScreen() {
                         <Text style={styles.noLocationText}>Sin ubicación GPS</Text>
                       </View>
                     )}
-
-                    <View style={styles.quickActions}>
-                      <TouchableOpacity 
-                        style={[styles.quickActionBtn, styles.acceptBtn]}
-                        onPress={() => handleUpdateStatus(request.id, 'in_progress')}
-                      >
-                        <MaterialIcons name="check-circle" size={18} color="#fff" />
-                        <Text style={styles.quickActionText}>Atender</Text>
-                      </TouchableOpacity>
-
-                      <TouchableOpacity 
-                        style={[styles.quickActionBtn, styles.rejectBtn]}
-                        onPress={() => handleUpdateStatus(request.id, 'cancelled')}
-                      >
-                        <MaterialIcons name="cancel" size={18} color="#fff" />
-                        <Text style={styles.quickActionText}>Rechazar</Text>
-                      </TouchableOpacity>
-                    </View>
                   </View>
                 )}
 

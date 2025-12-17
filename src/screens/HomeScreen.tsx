@@ -23,9 +23,10 @@ interface ServiceRequest {
   user_id: string;
   status: string;
   service_type: string;
+  service_name?: string;
+  service_description?: string;
   latitude: number;
   longitude: number;
-  description?: string;
   mechanic_id?: string;
   created_at: string;
 }
@@ -630,8 +631,8 @@ export default function HomeScreen() {
                   longitude: service.longitude,
                 }}
                 pinColor={getMarkerColor(service)}
-                title={service.service_type}
-                description={service.description || 'Sin descripción'}
+                title={service.service_name || service.service_type}
+                description={service.service_description || 'Sin descripción'}
                 onPress={() => setSelectedService(service)}
               />
             ))}
@@ -696,7 +697,7 @@ export default function HomeScreen() {
                   {myActiveService.status === 'in_progress' && '🔧 Servicio en progreso'}
                 </Text>
                 <Text style={styles.activeBannerSubtitle}>
-                  {myActiveService.service_type}
+                  {myActiveService.service_name || myActiveService.service_type}
                   {routeDuration && myActiveService.status === 'accepted' && ` • Llega en ${routeDuration}`}
                 </Text>
               </View>
@@ -712,10 +713,10 @@ export default function HomeScreen() {
           <View style={styles.serviceDetailBanner}>
             <View style={styles.serviceDetailContent}>
               <Text style={styles.serviceDetailTitle}>
-                {activeServiceForMechanic.service_type}
+                {activeServiceForMechanic.service_name || activeServiceForMechanic.service_type}
               </Text>
               <Text style={styles.serviceDetailDesc}>
-                {activeServiceForMechanic.description || 'Sin descripción'}
+                {activeServiceForMechanic.service_description || 'Sin descripción'}
               </Text>
               {routeDistance && routeDuration && (
                 <View style={styles.routeInfo}>
@@ -789,7 +790,7 @@ export default function HomeScreen() {
                     onPress={() => {
                       Alert.alert(
                         'ℹ️ Información del Servicio',
-                        `Tipo: ${activeServiceForMechanic.service_type}\n\nDescripción: ${activeServiceForMechanic.description || 'Sin descripción'}\n\nEstado: Trabajando en el vehículo`,
+                        `Servicio: ${activeServiceForMechanic.service_name || activeServiceForMechanic.service_type}\n\nDescripción: ${activeServiceForMechanic.service_description || 'Sin descripción'}\n\nEstado: Trabajando en el vehículo`,
                         [{ text: 'OK' }]
                       );
                     }}
