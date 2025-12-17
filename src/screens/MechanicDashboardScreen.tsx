@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Alert, BackHandler } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import RoleGuard from '../components/RoleGuard';
 import { useAuth } from '../context/AuthContext';
@@ -24,6 +24,23 @@ export default function MechanicDashboardScreen() {
   useEffect(() => {
     loadRequests();
   }, []);
+
+  // Manejar el botón físico de "atrás" en Android cuando este screen es raíz
+  useFocusEffect(
+    React.useCallback(() => {
+      const onBackPress = () => {
+        if (navigation.canGoBack()) {
+          navigation.goBack();
+        } else {
+          navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
+        }
+        return true; // Consumir el evento
+      };
+
+      const sub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+      return () => sub.remove();
+    }, [navigation])
+  );
 
   const loadRequests = async () => {
     setLoading(true);
@@ -120,7 +137,16 @@ export default function MechanicDashboardScreen() {
     <RoleGuard allowedRoles={['mecanico', 'admin']}>
       <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']}>
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+          <TouchableOpacity
+            style={styles.backBtn}
+            onPress={() => {
+              if (navigation.canGoBack()) {
+                navigation.goBack();
+              } else {
+                navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
+              }
+            }}
+          >
             <MaterialIcons name="arrow-back" size={24} color="#1f2937" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>🔧 Panel de Mecánico</Text>

@@ -51,6 +51,23 @@ export default function HomeScreen() {
   const [activeServiceForMechanic, setActiveServiceForMechanic] = useState<ServiceRequest | null>(null);
   const mapRef = useRef<MapView>(null);
 
+  // Limpia la selección de servicio traída desde el dashboard del mecánico
+  const clearSelectedServiceContext = () => {
+    try {
+      // Limpiar estados locales relacionados
+      setActiveServiceForMechanic(null);
+      setSelectedService(null);
+      // Borrar el parámetro de ruta para evitar UI obsoleta al volver atrás
+      if (route.params?.selectedService !== undefined) {
+        // El cast a any evita fricciones con tipos de params opcionales
+        navigation.setParams({ selectedService: undefined } as any);
+      }
+    } catch (e) {
+      // Evitar romper el flujo por un error no crítico
+      console.log('clearSelectedServiceContext error:', e);
+    }
+  };
+
   useEffect(() => {
     initializeMap();
   }, []);
@@ -317,10 +334,22 @@ export default function HomeScreen() {
               setRouteCoordinates([]);
               setRouteDistance('');
               setRouteDuration('');
+              // Limpiar selección y params para evitar volver con UI desactualizada
+              clearSelectedServiceContext();
               Alert.alert(
                 '🎉 Servicio Completado',
                 'El cliente puede calificar tu trabajo',
-                [{ text: 'OK', onPress: () => navigation.navigate('MechanicDashboard') }]
+                [
+                  {
+                    text: 'OK',
+                    // Resetear el stack para evitar múltiples MechanicDashboard apilados
+                    onPress: () =>
+                      navigation.reset({
+                        index: 0,
+                        routes: [{ name: 'MechanicDashboard' }],
+                      })
+                  }
+                ]
               );
             } catch (error) {
               Alert.alert('Error', 'No se pudo completar el servicio');
@@ -367,11 +396,20 @@ export default function HomeScreen() {
               setRouteCoordinates([]);
               setRouteDistance('');
               setRouteDuration('');
+              // Asegurar que no quede el botón de completar visible al volver
+              clearSelectedServiceContext();
 
               Alert.alert(
                 'Servicio Cancelado',
                 'El servicio ha sido liberado y puedes aceptar otro.',
-                [{ text: 'OK', onPress: () => navigation.navigate('MechanicDashboard') }]
+                [{
+                  text: 'OK',
+                  onPress: () =>
+                    navigation.reset({
+                      index: 0,
+                      routes: [{ name: 'MechanicDashboard' }],
+                    })
+                }]
               );
             } catch (error) {
               console.error('Error cancelando servicio:', error);
