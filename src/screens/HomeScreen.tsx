@@ -35,6 +35,7 @@ export default function HomeScreen() {
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const route = useRoute<HomeScreenRouteProp>();
   const { userRole, user } = useAuth();
+  const enablePollingFallback = process.env.EXPO_PUBLIC_ENABLE_POLLING_FALLBACK !== 'false';
   
   const selectedServiceFromDashboard = route.params?.selectedService;
   const [currentLocation, setCurrentLocation] = useState<{ latitude: number; longitude: number } | null>(null);
@@ -49,6 +50,9 @@ export default function HomeScreen() {
   const [mechanicLocation, setMechanicLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   // Estado local para mantener el servicio actualizado (mecánico)
   const [activeServiceForMechanic, setActiveServiceForMechanic] = useState<ServiceRequest | null>(null);
+  // Refs para manejar suscripciones en tiempo real (cliente)
+  const mechanicLocationSubRef = useRef<any>(null);
+  const serviceStatusSubRef = useRef<any>(null);
   const mapRef = useRef<MapView>(null);
 
   // Limpia la selección de servicio traída desde el dashboard del mecánico
@@ -103,10 +107,9 @@ export default function HomeScreen() {
 
       // Si el servicio fue aceptado y hay un mecánico asignado
       // Suscribirse a su ubicación en tiempo real
-      if (service.mechanic_id && service.status === 'accepted') {
-        console.log('👀 Suscribiéndose a ubicación del mecánico...');
-        
-        const subscription = subscribeMechanicLocation(
+      if (service.mechanic_id && service.status === 'accepted' && !mechanicLocationSubRef.current) {
+        console.log('👀 Suscribiéndose a ubicación del mecánico (cliente)...');
+        mechanicLocationSubRef.current = subscribeMechanicLocation(
           service.id,
           (location) => {
             console.log('📍 Mecánico actualizado:', location);
@@ -115,23 +118,126 @@ export default function HomeScreen() {
               longitude: location.longitude,
             });
 
-            // Actualizar ruta si es necesario
-            if (currentLocation) {
-              getDirections(location, {
-                latitude: service.latitude,
-                longitude: service.longitude,
-              });
-            }
+            // Actualizar ruta hacia el cliente
+            getDirections(
+              { latitude: location.latitude, longitude: location.longitude },
+              { latitude: service.latitude, longitude: service.longitude }
+            );
           }
         );
-
-        // Limpiar suscripción al desmontar
-        return () => {
-          subscription.unsubscribe();
-        };
       }
     }
   };
+
+  // Suscripción en tiempo real al estado del servicio del CLIENTE
+  useEffect(() => {
+    if (!myActiveService) return;
+
+    // Limpiar suscripción previa si existe
+    if (serviceStatusSubRef.current) {
+      try { serviceStatusSubRef.current.unsubscribe?.(); } catch {}
+      serviceStatusSubRef.current = null;
+    }
+
+    console.log('🔄 Suscribiéndose a cambios del servicio del cliente:', myActiveService.id);
+    serviceStatusSubRef.current = supabase
+      .channel(`service-status:${myActiveService.id}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'service_requests', filter: `id=eq.${myActiveService.id}` },
+        (payload) => {
+          const updated = payload.new as ServiceRequest;
+          setMyActiveService(updated);
+
+          // Cuando el mecánico acepta, iniciar suscripción de ubicación si aún no existe
+          if (updated.status === 'accepted' && updated.mechanic_id && !mechanicLocationSubRef.current) {
+            console.log('✅ Servicio aceptado. Iniciando tracking de ubicación para cliente');
+            mechanicLocationSubRef.current = subscribeMechanicLocation(
+              updated.id,
+              (location) => {
+                setMechanicLocation({ latitude: location.latitude, longitude: location.longitude });
+                // Calcular ruta y ETA
+                getDirections(
+                  { latitude: location.latitude, longitude: location.longitude },
+                  { latitude: updated.latitude, longitude: updated.longitude }
+                );
+              }
+            );
+          }
+
+          // Limpiar cuando se complete o cancele
+          if (updated.status === 'completed' || updated.status === 'cancelled') {
+            setMechanicLocation(null);
+            setRouteCoordinates([]);
+            setRouteDistance('');
+            setRouteDuration('');
+            if (mechanicLocationSubRef.current) {
+              try { mechanicLocationSubRef.current.unsubscribe?.(); } catch {}
+              mechanicLocationSubRef.current = null;
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      try { serviceStatusSubRef.current?.unsubscribe?.(); } catch {}
+      serviceStatusSubRef.current = null;
+    };
+  }, [myActiveService?.id]);
+
+  // Fallback: Polling mientras el estado esté 'pending' para asegurar actualización automática
+  useEffect(() => {
+    if (!enablePollingFallback) return;
+    if (!myActiveService || myActiveService.status !== 'pending') return;
+
+    console.log('⏳ Iniciando polling de estado del servicio (cliente)');
+    const interval = setInterval(async () => {
+      try {
+        const { data, error } = await supabase
+          .from('service_requests')
+          .select('id, status, mechanic_id, latitude, longitude')
+          .eq('id', myActiveService.id)
+          .single();
+
+        if (!error && data) {
+          // Actualizar estado local si cambió
+          if (data.status !== myActiveService.status || data.mechanic_id !== myActiveService.mechanic_id) {
+            const updated: ServiceRequest = {
+              ...myActiveService,
+              status: data.status,
+              mechanic_id: data.mechanic_id || undefined,
+              latitude: data.latitude,
+              longitude: data.longitude,
+            };
+            setMyActiveService(updated);
+
+            // Si pasó a accepted, arrancar suscripción de ubicación
+            if (updated.status === 'accepted' && updated.mechanic_id && !mechanicLocationSubRef.current) {
+              console.log('✅ [Polling] Servicio aceptado. Iniciando tracking de ubicación');
+              mechanicLocationSubRef.current = subscribeMechanicLocation(
+                updated.id,
+                (location) => {
+                  setMechanicLocation({ latitude: location.latitude, longitude: location.longitude });
+                  getDirections(
+                    { latitude: location.latitude, longitude: location.longitude },
+                    { latitude: updated.latitude, longitude: updated.longitude }
+                  );
+                }
+              );
+            }
+          }
+        }
+      } catch (e) {
+        // evitar ruido de errores intermitentes
+      }
+    }, 4000);
+
+    return () => {
+      clearInterval(interval);
+      console.log('🛑 Polling detenido');
+    };
+  }, [myActiveService?.id, myActiveService?.status, enablePollingFallback]);
 
   // Verificar si el mecánico ya tiene un servicio activo
   const checkMechanicHasActiveService = async (): Promise<boolean> => {
