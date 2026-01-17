@@ -53,6 +53,7 @@ export default function HomeScreen() {
   // Refs para manejar suscripciones en tiempo real (cliente)
   const mechanicLocationSubRef = useRef<any>(null);
   const serviceStatusSubRef = useRef<any>(null);
+  const newRequestsSubRef = useRef<any>(null); // Para notificaciones de nuevas solicitudes (mecánicos)
   const mapRef = useRef<MapView>(null);
 
   // Limpia la selección de servicio traída desde el dashboard del mecánico
@@ -102,7 +103,12 @@ export default function HomeScreen() {
           text: 'Después',
           style: 'cancel',
           onPress: () => {
+            // Limpiar todo el estado del servicio
             setMyActiveService(null);
+            setMechanicLocation(null);
+            setRouteCoordinates([]);
+            setRouteDistance('');
+            setRouteDuration('');
           }
         }
       ],
@@ -129,7 +135,12 @@ export default function HomeScreen() {
         Alert.alert('Error', 'No se pudo guardar tu calificación');
       } else {
         Alert.alert('¡Gracias!', `Has calificado el servicio con ${rating} estrella${rating > 1 ? 's' : ''}`);
+        // Limpiar todo el estado del servicio
         setMyActiveService(null);
+        setMechanicLocation(null);
+        setRouteCoordinates([]);
+        setRouteDistance('');
+        setRouteDuration('');
       }
     } catch (error) {
       console.error('Error al enviar calificación:', error);
@@ -139,7 +150,78 @@ export default function HomeScreen() {
 
   useEffect(() => {
     initializeMap();
-  }, []);
+    
+    // Suscribirse a nuevas solicitudes si es mecánico
+    if (isMecanico(userRole)) {
+      subscribeToNewRequests();
+    }
+    
+    // Limpiar suscripciones al desmontar
+    return () => {
+      if (newRequestsSubRef.current) {
+        newRequestsSubRef.current.unsubscribe();
+      }
+    };
+  }, [userRole]);
+
+  // Suscribirse a nuevas solicitudes en tiempo real (para mecánicos)
+  const subscribeToNewRequests = () => {
+    console.log('🔔 Mecánico suscribiéndose a nuevas solicitudes desde mapa...');
+    
+    newRequestsSubRef.current = supabase
+      .channel('new-service-requests-map')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'service_requests'
+        },
+        (payload) => {
+          console.log('🆕 Nueva solicitud detectada en mapa:', payload.new);
+          const newRequest = payload.new as ServiceRequest;
+          
+          // Mostrar notificación in-app
+          Alert.alert(
+            '🚨 Nueva Solicitud',
+            `Servicio: ${newRequest.service_name || newRequest.service_type}\n${newRequest.service_description || ''}`,
+            [
+              {
+                text: 'Ver Ubicación',
+                onPress: () => {
+                  // Recargar servicios primero
+                  loadLocationAndServices();
+                  
+                  // Centrar el mapa en la nueva solicitud
+                  if (mapRef.current && newRequest.latitude && newRequest.longitude) {
+                    mapRef.current.animateToRegion({
+                      latitude: newRequest.latitude,
+                      longitude: newRequest.longitude,
+                      latitudeDelta: 0.01,
+                      longitudeDelta: 0.01,
+                    }, 1000);
+                  }
+                  
+                  // Seleccionar el servicio para mostrar detalles
+                  setSelectedService(newRequest);
+                }
+              },
+              {
+                text: 'Después',
+                style: 'cancel',
+                onPress: () => loadLocationAndServices() // Recargar mapa
+              }
+            ]
+          );
+          
+          // Recargar servicios en el mapa
+          loadLocationAndServices();
+        }
+      )
+      .subscribe((status) => {
+        console.log('📡 Estado de suscripción (mapa):', status);
+      });
+  };
 
   const initializeMap = async () => {
     await loadLocationAndServices();
@@ -154,6 +236,20 @@ export default function HomeScreen() {
       loadLocationAndServices();
       setSelectedService(selectedServiceFromDashboard);
       setActiveServiceForMechanic(selectedServiceFromDashboard);
+      
+      // Centrar el mapa en la ubicación de la solicitud
+      if (selectedServiceFromDashboard.latitude && selectedServiceFromDashboard.longitude) {
+        setTimeout(() => {
+          if (mapRef.current) {
+            mapRef.current.animateToRegion({
+              latitude: selectedServiceFromDashboard.latitude,
+              longitude: selectedServiceFromDashboard.longitude,
+              latitudeDelta: 0.01,
+              longitudeDelta: 0.01,
+            }, 1000);
+          }
+        }, 500);
+      }
     }
   }, [route.params?.selectedService]);
 
@@ -172,7 +268,8 @@ export default function HomeScreen() {
 
       // Si el servicio fue aceptado y hay un mecánico asignado
       // Suscribirse a su ubicación en tiempo real
-      if (service.mechanic_id && service.status === 'accepted' && !mechanicLocationSubRef.current) {
+      const activeStatuses = ['accepted', 'arrived', 'in_progress'];
+      if (service.mechanic_id && activeStatuses.includes(service.status) && !mechanicLocationSubRef.current) {
         console.log('👀 Suscribiéndose a ubicación del mecánico (cliente)...');
         mechanicLocationSubRef.current = subscribeMechanicLocation(
           service.id,
@@ -214,9 +311,10 @@ export default function HomeScreen() {
           const updated = payload.new as ServiceRequest;
           setMyActiveService(updated);
 
-          // Cuando el mecánico acepta, iniciar suscripción de ubicación si aún no existe
-          if (updated.status === 'accepted' && updated.mechanic_id && !mechanicLocationSubRef.current) {
-            console.log('✅ Servicio aceptado. Iniciando tracking de ubicación para cliente');
+          // Cuando el mecánico acepta o está en estados activos, iniciar suscripción de ubicación si aún no existe
+          const activeStatuses = ['accepted', 'arrived', 'in_progress'];
+          if (activeStatuses.includes(updated.status) && updated.mechanic_id && !mechanicLocationSubRef.current) {
+            console.log('✅ Servicio activo. Iniciando tracking de ubicación para cliente');
             mechanicLocationSubRef.current = subscribeMechanicLocation(
               updated.id,
               (location) => {
@@ -612,22 +710,43 @@ export default function HomeScreen() {
           onPress: async () => {
             if (!myActiveService) return;
 
-            const { error } = await supabase
-              .from('service_requests')
-              .update({ status: 'cancelled' })
-              .eq('id', myActiveService.id);
+            try {
+              const { error } = await supabase
+                .from('service_requests')
+                .update({ status: 'cancelled' })
+                .eq('id', myActiveService.id)
+                .eq('user_id', user?.id); // Asegurar que sea del usuario
 
-            if (error) {
-              Alert.alert('Error', 'No se pudo cancelar el servicio');
-            } else {
+              if (error) {
+                console.error('Error cancelando servicio:', error);
+                Alert.alert('Error', 'No se pudo cancelar el servicio');
+                return;
+              }
+
+              // Limpiar suscripciones
+              if (mechanicLocationSubRef.current) {
+                try { mechanicLocationSubRef.current.unsubscribe(); } catch {}
+                mechanicLocationSubRef.current = null;
+              }
+              if (serviceStatusSubRef.current) {
+                try { serviceStatusSubRef.current.unsubscribe(); } catch {}
+                serviceStatusSubRef.current = null;
+              }
+
+              // Limpiar estados
               setMyActiveService(null);
-              // Limpiar el marcador del mecánico y la ruta
               setMechanicLocation(null);
               setRouteCoordinates([]);
               setRouteDistance('');
               setRouteDuration('');
+              
+              // Recargar servicios
               loadLocationAndServices();
-              Alert.alert('Servicio Cancelado', 'El servicio ha sido cancelado');
+              
+              Alert.alert('Servicio Cancelado', 'El servicio ha sido cancelado exitosamente');
+            } catch (error) {
+              console.error('Error en handleCancelService:', error);
+              Alert.alert('Error', 'Ocurrió un error al cancelar el servicio');
             }
           },
         },

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Alert, BackHandler } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -7,6 +7,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import RoleGuard from '../components/RoleGuard';
 import { useAuth } from '../context/AuthContext';
 import { getAll, update } from '../services/supabaseService';
+import { supabase } from '../config/supabase';
 import { RootStackParamList } from '../navigation/AppNavigator';
 
 type MechanicDashboardNavigationProp = NativeStackNavigationProp<RootStackParamList, 'MechanicDashboard'>;
@@ -20,10 +21,67 @@ export default function MechanicDashboardScreen() {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('pending'); // 'pending', 'in_progress', 'completed'
+  const subscriptionRef = useRef<any>(null);
 
   useEffect(() => {
     loadRequests();
+    subscribeToNewRequests();
+    
+    return () => {
+      // Limpiar suscripción al desmontar
+      if (subscriptionRef.current) {
+        subscriptionRef.current.unsubscribe();
+      }
+    };
   }, []);
+
+  // Suscribirse a nuevas solicitudes en tiempo real
+  const subscribeToNewRequests = () => {
+    console.log('🔔 Mecánico suscribiéndose a nuevas solicitudes...');
+    
+    subscriptionRef.current = supabase
+      .channel('new-service-requests')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'service_requests'
+        },
+        (payload) => {
+          console.log('🆕 Nueva solicitud detectada:', payload.new);
+          const newRequest = payload.new;
+          
+          // Mostrar notificación in-app
+          Alert.alert(
+            '🚨 Nueva Solicitud',
+            `Servicio: ${newRequest.service_name || newRequest.service_type}\n${newRequest.service_description || ''}`,
+            [
+              {
+                text: 'Ver Ubicación en Mapa',
+                onPress: () => {
+                  navigation.navigate('Home', { selectedService: newRequest });
+                }
+              },
+              {
+                text: 'Después',
+                style: 'cancel',
+                onPress: () => {
+                  setActiveTab('pending');
+                  loadRequests();
+                }
+              }
+            ]
+          );
+          
+          // Recargar lista automáticamente
+          loadRequests();
+        }
+      )
+      .subscribe((status) => {
+        console.log('📡 Estado de suscripción:', status);
+      });
+  };
 
   // Manejar el botón físico de "atrás" en Android cuando este screen es raíz
   useFocusEffect(
