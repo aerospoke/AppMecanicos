@@ -72,6 +72,71 @@ export default function HomeScreen() {
     }
   };
 
+  // Función para mostrar alerta de calificación al cliente
+  const showRatingAlert = (service: ServiceRequest) => {
+    Alert.alert(
+      '🎉 ¡Servicio Completado!',
+      `Tu servicio de ${service.service_name || service.service_type} ha sido completado.\n\n¿Cómo calificarías el servicio?`,
+      [
+        {
+          text: '⭐',
+          onPress: () => submitRating(service, 1),
+        },
+        {
+          text: '⭐⭐',
+          onPress: () => submitRating(service, 2),
+        },
+        {
+          text: '⭐⭐⭐',
+          onPress: () => submitRating(service, 3),
+        },
+        {
+          text: '⭐⭐⭐⭐',
+          onPress: () => submitRating(service, 4),
+        },
+        {
+          text: '⭐⭐⭐⭐⭐',
+          onPress: () => submitRating(service, 5),
+        },
+        {
+          text: 'Después',
+          style: 'cancel',
+          onPress: () => {
+            setMyActiveService(null);
+          }
+        }
+      ],
+      { cancelable: false }
+    );
+  };
+
+  // Función para enviar la calificación a la tabla service_ratings
+  const submitRating = async (service: ServiceRequest, rating: number) => {
+    try {
+      // Insertar en la nueva tabla service_ratings
+      const { error } = await supabase
+        .from('service_ratings')
+        .insert({
+          service_request_id: service.id,
+          user_id: user?.id,
+          mechanic_id: service.mechanic_id,
+          rating: rating,
+          comment: null, // Por ahora sin comentarios, se puede agregar después
+        });
+
+      if (error) {
+        console.error('Error al guardar calificación:', error);
+        Alert.alert('Error', 'No se pudo guardar tu calificación');
+      } else {
+        Alert.alert('¡Gracias!', `Has calificado el servicio con ${rating} estrella${rating > 1 ? 's' : ''}`);
+        setMyActiveService(null);
+      }
+    } catch (error) {
+      console.error('Error al enviar calificación:', error);
+      Alert.alert('Error', 'Hubo un problema al enviar tu calificación');
+    }
+  };
+
   useEffect(() => {
     initializeMap();
   }, []);
@@ -174,6 +239,23 @@ export default function HomeScreen() {
             if (mechanicLocationSubRef.current) {
               try { mechanicLocationSubRef.current.unsubscribe?.(); } catch {}
               mechanicLocationSubRef.current = null;
+            }
+            
+            // Mostrar alerta de calificación cuando se complete
+            if (updated.status === 'completed') {
+              setTimeout(() => {
+                showRatingAlert(updated);
+              }, 500);
+            } else if (updated.status === 'cancelled') {
+              // Si se canceló, limpiar el servicio activo y notificar
+              setTimeout(() => {
+                setMyActiveService(null);
+                Alert.alert(
+                  '⚠️ Servicio Cancelado',
+                  'El servicio ha sido cancelado. Puedes solicitar uno nuevo.',
+                  [{ text: 'Entendido' }]
+                );
+              }, 500);
             }
           }
         }
@@ -441,22 +523,13 @@ export default function HomeScreen() {
               setRouteDistance('');
               setRouteDuration('');
               // Limpiar selección y params para evitar volver con UI desactualizada
+              setActiveServiceForMechanic(null);
               clearSelectedServiceContext();
-              Alert.alert(
-                '🎉 Servicio Completado',
-                'El cliente puede calificar tu trabajo',
-                [
-                  {
-                    text: 'OK',
-                    // Resetear el stack para evitar múltiples MechanicDashboard apilados
-                    onPress: () =>
-                      navigation.reset({
-                        index: 0,
-                        routes: [{ name: 'MechanicDashboard' }],
-                      })
-                  }
-                ]
-              );
+              // Redirigir inmediatamente al dashboard sin mostrar alert
+              navigation.reset({
+                index: 0,
+                routes: [{ name: 'MechanicDashboard' }],
+              });
             } catch (error) {
               Alert.alert('Error', 'No se pudo completar el servicio');
             }
@@ -829,7 +902,9 @@ export default function HomeScreen() {
         )}
 
         {/* Banner de servicio activo */}
-        {myActiveService && (
+        {myActiveService && 
+         myActiveService.status !== 'completed' && 
+         myActiveService.status !== 'cancelled' && (
           <View style={styles.activeBanner}>
             <View style={styles.activeBannerContent}>
               <MaterialIcons name="build-circle" size={24} color="#10b981" />
@@ -853,7 +928,9 @@ export default function HomeScreen() {
         )}
 
         {/* Banner de servicio seleccionado desde dashboard (mecánico) */}
-        {activeServiceForMechanic && isMecanico(userRole) && (
+        {activeServiceForMechanic && isMecanico(userRole) && 
+         activeServiceForMechanic.status !== 'completed' && 
+         activeServiceForMechanic.status !== 'cancelled' && (
           <View style={styles.serviceDetailBanner}>
             <View style={styles.serviceDetailContent}>
               <Text style={styles.serviceDetailTitle}>
