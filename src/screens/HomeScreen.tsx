@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, TouchableOpacity, Text, Modal, ScrollView, Alert, ActivityIndicator, Linking, Platform } from 'react-native';
+import { View, TouchableOpacity, Text, Modal, ScrollView, Alert, ActivityIndicator, Linking, Platform, TextInput, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MapView, { Marker, PROVIDER_GOOGLE, Polyline } from 'react-native-maps';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -41,6 +41,9 @@ export default function HomeScreen() {
   const [currentLocation, setCurrentLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [serviceRequests, setServiceRequests] = useState<ServiceRequest[]>([]);
   const [showServiceModal, setShowServiceModal] = useState(false);
+  const [showServiceDetailModal, setShowServiceDetailModal] = useState(false);
+  const [selectedServiceType, setSelectedServiceType] = useState<{type: string, icon: string, desc: string, desc2: string, image: any} | null>(null);
+  const [serviceDescription, setServiceDescription] = useState('');
   const [myActiveService, setMyActiveService] = useState<ServiceRequest | null>(null);
   const [selectedService, setSelectedService] = useState<ServiceRequest | null>(null);
   const [isLoadingMap, setIsLoadingMap] = useState(true);
@@ -1162,17 +1165,21 @@ export default function HomeScreen() {
             
             <ScrollView style={styles.serviceList}>
               {[
-                { type: 'Cambio de Llanta', icon: '🔧', desc: 'Cambio o reparación de llantas' },
-                { type: 'Batería Descargada', icon: '🔋', desc: 'Auxilio con batería' },
-                { type: 'Falta de Gasolina', icon: '⛽', desc: 'Servicio de gasolina' },
-                { type: 'Remolque', icon: '🚗', desc: 'Servicio de grúa' },
-                { type: 'Revisión General', icon: '🔍', desc: 'Diagnóstico del vehículo' },
-                { type: 'Otro', icon: '💡', desc: 'Otro tipo de servicio' },
+                { type: 'Cambio de Llanta', icon: '🔧', desc: 'Cambio o reparación de llantas', desc2: "¿Tu llanta decidió 'tomar una siesta' en medio del camino? A veces el asfalto muerde, pero no te preocupes, nosotros traemos la curita (y el gato hidráulico).", image: require('../../assets/wheel-flat.png') },
+                { type: 'Batería Descargada', icon: '🔋', desc: 'Auxilio con batería', desc2: "¿Tu batería se declaró en huelga de brazos caídos? Dale, que todos tenemos días de 'baja energía'. Nosotros llegamos con los cables mágicos para revivirla como en las películas. ¡Frankenstein estaría orgulloso!", image: require('../../assets/electric-damage.png') },
+                { type: 'Falta de Gasolina', icon: '⛽', desc: 'Servicio de gasolina', desc2: "¿El tanque decidió hacer dieta sin avisarte? Tranquilo, hasta los mejores olvidan parar en la gasolinera. Te llevamos combustible para que tu auto deje de hacerse el dramático.", image: require('../../assets/without-gasoline.png') },
+                { type: 'Remolque', icon: '🚗', desc: 'Servicio de grúa', desc2: "¿Tu auto dijo 'hoy no me levanto de la cama'? A veces necesitan un taxi VIP. Nuestra grúa lo llevará con todo el glamour que merece, como una estrella de cine en su limusina.", image: require('../../assets/grua.png') },
+                { type: 'Revisión General', icon: '🔍', desc: 'Diagnóstico del vehículo', desc2: "¿Tu auto suena como orquesta desafinada? Ruidos, vibraciones, lucecitas misteriosas... Somos los detectives de motores. CSI Automotriz a tu servicio. ", image: require('../../assets/engine-dmaged.png') },
+                { type: 'Otro', icon: '💡', desc: 'Otro tipo de servicio', desc2: "¿Tu problema es tan único que ni Google lo entiende? ¡Nos encantan los retos! Cuéntanos qué locura le pasó a tu auto y lo resolveremos juntos. Nada nos asusta... bueno, casi nada.", image: require('../../assets/not-idea-error.png') },
               ].map((service, index) => (
                 <TouchableOpacity
                   key={index}
                   style={styles.serviceOption}
-                  onPress={() => handleSelectService(service.type, service.desc)}
+                  onPress={() => {
+                    setSelectedServiceType(service);
+                    setShowServiceModal(false);
+                    setShowServiceDetailModal(true);
+                  }}
                 >
                   <Text style={styles.serviceIcon}>{service.icon}</Text>
                   <View style={styles.serviceInfo}>
@@ -1182,6 +1189,82 @@ export default function HomeScreen() {
                   <MaterialIcons name="chevron-right" size={24} color="#9ca3af" />
                 </TouchableOpacity>
               ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal de detalles del servicio */}
+      <Modal
+        visible={showServiceDetailModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowServiceDetailModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <TouchableOpacity onPress={() => {
+                setShowServiceDetailModal(false);
+                setShowServiceModal(true);
+              }}>
+                <MaterialIcons name="arrow-back" size={24} color="#6b7280" />
+              </TouchableOpacity>
+              <Text style={styles.modalTitle}>Detalles del Servicio</Text>
+              <TouchableOpacity onPress={() => {
+                setShowServiceDetailModal(false);
+                setServiceDescription('');
+                setSelectedServiceType(null);
+              }}>
+                <MaterialIcons name="close" size={24} color="#6b7280" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.serviceDetailContent}>
+              {selectedServiceType && (
+                <>
+                  <Image 
+                    source={selectedServiceType.image} 
+                    style={styles.serviceImage}
+                    resizeMode="cover"
+                  />
+                  
+                  <View style={styles.selectedServiceCard}>
+
+                    <View style={styles.selectedServiceInfo}>
+                      <Text style={styles.selectedServiceName}>{selectedServiceType.type}</Text>
+                      <Text style={styles.selectedServiceDesc}>{selectedServiceType.desc2}</Text>
+                      <View style={styles.serviceFeatures}>
+                        <View style={styles.featureItem}>
+                          <Text style={styles.featureIcon}>⚡</Text>
+                          <Text style={styles.featureText}>Servicio rápido</Text>
+                        </View>
+                        <View style={styles.featureItem}>
+                          <Text style={styles.featureIcon}>📍</Text>
+                          <Text style={styles.featureText}>A domicilio</Text>
+                        </View>
+                        <View style={styles.featureItem}>
+                          <Text style={styles.featureIcon}>✓</Text>
+                          <Text style={styles.featureText}>Profesional</Text>
+                        </View>
+                      </View>
+                    </View>
+                  </View>
+
+                 
+                  <TouchableOpacity
+                    style={styles.confirmBtn}
+                    onPress={() => {
+                      handleSelectService(selectedServiceType.type, serviceDescription || selectedServiceType.desc);
+                      setShowServiceDetailModal(false);
+                      setServiceDescription('');
+                      setSelectedServiceType(null);
+                    }}
+                  >
+                    <Text style={styles.confirmBtnText}>Solicitar Servicio</Text>
+                  </TouchableOpacity>
+                </>
+              )}
             </ScrollView>
           </View>
         </View>
