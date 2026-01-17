@@ -832,7 +832,11 @@ export default function HomeScreen() {
 
   const getDirections = async (origin: { latitude: number; longitude: number }, destination: { latitude: number; longitude: number }) => {
     try {
-      const apiKey = process.env.GOOGLE_MAPS_API_KEY || 'AIzaSyAncz2JIS0VyL21Ywo9gDZyQUAPPxjgrnw';
+      const apiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || process.env.GOOGLE_MAPS_API_KEY || '';
+      if (!apiKey) {
+        console.warn('⚠️ Google Maps API key no configurada. Define EXPO_PUBLIC_GOOGLE_MAPS_API_KEY o GOOGLE_MAPS_API_KEY.');
+        return;
+      }
       const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${origin.latitude},${origin.longitude}&destination=${destination.latitude},${destination.longitude}&key=${apiKey}`;
       
       const response = await fetch(url);

@@ -41,19 +41,26 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   const loadUserProfile = async (userId: string) => {
-    console.log('🔍 Cargando perfil de usuario:', userId);
-    const { data, error } = await getUserProfile(userId);
-    if (!error && data) {
-      console.log('✅ Perfil cargado:', data);
-      setUserProfile(data as UserProfile);
-      setUserRole(data.rol as 'usuario' | 'mecanico' | 'admin');
-      
-      // Registrar token de notificaciones para TODOS los usuarios
-      console.log('📱 Registrando push token para:', data.rol);
-      registerPushToken(userId);
-    } else {
-      console.log('⚠️ Error cargando perfil o no existe');
-      // Si no existe perfil, asignar rol por defecto 'usuario'
+    try {
+      console.log('🔍 Cargando perfil de usuario:', userId);
+      const { data, error } = await getUserProfile(userId);
+      if (!error && data) {
+        console.log('✅ Perfil cargado:', data);
+        setUserProfile(data as UserProfile);
+        setUserRole(data.rol as 'usuario' | 'mecanico' | 'admin');
+        
+        // Registrar token de notificaciones de forma asíncrona (sin await)
+        console.log('📱 Registrando push token para:', data.rol);
+        // registerPushToken(userId).catch(error => 
+        //   console.log('❌ Error en registro asíncrono de token:', error)
+        // );
+      } else {
+        console.log('⚠️ Error cargando perfil o no existe');
+        // Si no existe perfil, asignar rol por defecto 'usuario'
+        setUserRole("usuario");
+      }
+    } catch (error) {
+      console.log('❌ Error crítico cargando perfil:', error);
       setUserRole("usuario");
     }
   };
@@ -67,12 +74,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (token) {
         console.log('💾 Guardando token en BD...');
         await savePushToken(userId, token);
-        console.log('✅ Token de notificaciones registrado para mecánico');
+        console.log('✅ Token de notificaciones registrado');
       } else {
         console.log('⚠️ No se obtuvo token (puede ser emulador)');
       }
     } catch (error) {
       console.log('❌ Error registrando token de notificaciones:', error);
+      // No relanzar el error para que no bloquee el login
     }
   };
 
@@ -85,13 +93,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     // Obtener sesión inicial
     supabase.auth.getSession().then(async ({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        await loadUserProfile(session.user.id);
+      try {
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        if (session?.user) {
+          await loadUserProfile(session.user.id);
+        }
+        
+        setLoading(false);
+      } catch (error) {
+        console.log('❌ Error en getSession:', error);
+        setLoading(false);
       }
-      
+    }).catch((error) => {
+      console.log('❌ Error obteniendo sesión inicial:', error);
       setLoading(false);
     });
 
@@ -99,17 +115,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        await loadUserProfile(session.user.id);
-      } else {
-        setUserProfile(null);
-        setUserRole(null);
+      try {
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        if (session?.user) {
+          await loadUserProfile(session.user.id);
+        } else {
+          setUserProfile(null);
+          setUserRole(null);
+        }
+        
+        setLoading(false);
+      } catch (error) {
+        console.log('❌ Error en onAuthStateChange:', error);
+        setLoading(false);
       }
-      
-      setLoading(false);
     });
 
     return () => subscription.unsubscribe();
