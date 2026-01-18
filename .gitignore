@@ -39,3 +39,9 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Keystore - NUNCA SUBIR A GIT pero NUNCA BORRAR
+# android/app/app-release.keystore
+
+# Backup de llaves (no subir a git)
+BACKUP_KEYS/

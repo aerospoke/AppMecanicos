@@ -1206,70 +1206,65 @@ export default function HomeScreen() {
         onRequestClose={() => setShowServiceDetailModal(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <TouchableOpacity onPress={() => {
-                setShowServiceDetailModal(false);
-                setShowServiceModal(true);
-              }}>
-                <MaterialIcons name="arrow-back" size={24} color="#6b7280" />
-              </TouchableOpacity>
-              <Text style={styles.modalTitle}>Detalles del Servicio</Text>
-              <TouchableOpacity onPress={() => {
-                setShowServiceDetailModal(false);
-                setServiceDescription('');
-                setSelectedServiceType(null);
-              }}>
-                <MaterialIcons name="close" size={24} color="#6b7280" />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView style={styles.serviceDetailContent}>
-              {selectedServiceType && (
-                <>
+          <View style={styles.modernModalContent}>
+            {selectedServiceType && (
+              <>
+                {/* Ilustración del servicio */}
+                <View style={styles.serviceImageContainer}>
                   <Image 
                     source={selectedServiceType.image} 
-                    style={styles.serviceImage}
-                    resizeMode="cover"
+                    style={styles.modernServiceImage}
+                    resizeMode="contain"
                   />
+                </View>
+                
+                {/* Información del servicio */}
+                <View style={styles.serviceInfoContainer}>
+                  <Text style={styles.modernServiceTitle}>{selectedServiceType.type}</Text>
+                  <Text style={styles.modernServiceDescription}>{selectedServiceType.desc2}</Text>
                   
-                  <View style={styles.selectedServiceCard}>
-
-                    <View style={styles.selectedServiceInfo}>
-                      <Text style={styles.selectedServiceName}>{selectedServiceType.type}</Text>
-                      <Text style={styles.selectedServiceDesc}>{selectedServiceType.desc2}</Text>
-                      <View style={styles.serviceFeatures}>
-                        <View style={styles.featureItem}>
-                          <Text style={styles.featureIcon}>⚡</Text>
-                          <Text style={styles.featureText}>Servicio rápido</Text>
-                        </View>
-                        <View style={styles.featureItem}>
-                          <Text style={styles.featureIcon}>📍</Text>
-                          <Text style={styles.featureText}>A domicilio</Text>
-                        </View>
-                        <View style={styles.featureItem}>
-                          <Text style={styles.featureIcon}>✓</Text>
-                          <Text style={styles.featureText}>Profesional</Text>
-                        </View>
-                      </View>
+                  {/* Tags de características */}
+                  <View style={styles.modernServiceFeatures}>
+                    <View style={styles.modernFeatureTag}>
+                      <Text style={styles.modernFeatureIcon}>⚡</Text>
+                      <Text style={styles.modernFeatureText}>Servicio rápido</Text>
+                    </View>
+                    <View style={styles.modernFeatureTag}>
+                      <Text style={styles.modernFeatureIcon}>📍</Text>
+                      <Text style={styles.modernFeatureText}>A domicilio</Text>
+                    </View>
+                    <View style={styles.modernFeatureTag}>
+                      <Text style={styles.modernFeatureIcon}>✓</Text>
+                      <Text style={styles.modernFeatureText}>Profesional</Text>
                     </View>
                   </View>
+                </View>
 
-                 
-                  <TouchableOpacity
-                    style={styles.confirmBtn}
-                    onPress={() => {
-                      handleSelectService(selectedServiceType.type, serviceDescription || selectedServiceType.desc);
-                      setShowServiceDetailModal(false);
-                      setServiceDescription('');
-                      setSelectedServiceType(null);
-                    }}
-                  >
-                    <Text style={styles.confirmBtnText}>Solicitar Servicio</Text>
-                  </TouchableOpacity>
-                </>
-              )}
-            </ScrollView>
+                {/* Botón principal */}
+                <TouchableOpacity
+                  style={styles.modernConfirmBtn}
+                  onPress={() => {
+                    handleSelectService(selectedServiceType.type, serviceDescription || selectedServiceType.desc);
+                    setShowServiceDetailModal(false);
+                    setServiceDescription('');
+                    setSelectedServiceType(null);
+                  }}
+                >
+                  <Text style={styles.modernConfirmBtnText}>Solicitar Servicio</Text>
+                </TouchableOpacity>
+
+                {/* Botón volver */}
+                <TouchableOpacity
+                  style={styles.modernBackBtn}
+                  onPress={() => {
+                    setShowServiceDetailModal(false);
+                    setShowServiceModal(true);
+                  }}
+                >
+                  <Text style={styles.modernBackBtnText}>volver</Text>
+                </TouchableOpacity>
+              </>
+            )}
           </View>
         </View>
       </Modal>
