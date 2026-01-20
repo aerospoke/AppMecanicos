@@ -506,7 +506,7 @@ export default function HomeScreen() {
       const hasActiveService = await checkMechanicHasActiveService();
       if (hasActiveService) {
         Alert.alert(
-          '⚠️ Servicio Activo',
+          'Servicio Activo',
           'Ya tienes un servicio en progreso. Complétalo antes de aceptar otro.',
           [{ text: 'Entendido' }]
         );
@@ -538,21 +538,7 @@ export default function HomeScreen() {
       });
 
       // 4. Enviar notificación al cliente
-      // TODO: Implementar sendPushToUser() para notificar al cliente
-      
-      Alert.alert(
-        '🎯 Servicio Aceptado',
-        'Tu ubicación se está compartiendo con el cliente en tiempo real.',
-        [
-          {
-            text: 'Entendido',
-            onPress: () => {
-              // Quedarse en la pantalla con navegación activa
-              console.log('✅ Mecánico en camino con GPS activo');
-            }
-          }
-        ]
-      );
+    
 
     } catch (error) {
       console.error('Error aceptando servicio:', error);
@@ -563,30 +549,17 @@ export default function HomeScreen() {
   const handleArrived = async () => {
     if (!selectedServiceFromDashboard) return;
 
-    Alert.alert(
-      '📍 Confirmar Llegada',
-      '¿Has llegado a la ubicación del cliente?',
-      [
-        { text: 'No', style: 'cancel' },
-        {
-          text: 'Sí, he llegado',
-          onPress: async () => {
-            try {
+    try {
               await updateServiceStatus(selectedServiceFromDashboard.id, 'arrived');
               setActiveServiceForMechanic({
                 ...selectedServiceFromDashboard,
                 status: 'arrived',
                 mechanic_id: user?.id,
               });
-              Alert.alert('✅ Llegada Confirmada', 'El cliente ha sido notificado');
               // TODO: Enviar push al cliente
             } catch (error) {
               Alert.alert('Error', 'No se pudo actualizar el estado');
             }
-          }
-        }
-      ]
-    );
   };
 
   const handleStartWork = async () => {
@@ -599,7 +572,6 @@ export default function HomeScreen() {
         status: 'in_progress',
         mechanic_id: user?.id,
       });
-      Alert.alert('🔧 Servicio Iniciado', 'Puedes comenzar a trabajar en el vehículo');
     } catch (error) {
       Alert.alert('Error', 'No se pudo actualizar el estado');
     }
@@ -646,7 +618,7 @@ export default function HomeScreen() {
     if (!selectedServiceFromDashboard) return;
 
     Alert.alert(
-      '⚠️ Cancelar Servicio',
+      'Cancelar Servicio',
       '¿Estás seguro? Esto afectará tu calificación y el cliente será notificado.',
       [
         { text: 'No', style: 'cancel' },
@@ -662,7 +634,7 @@ export default function HomeScreen() {
               const { error } = await supabase
                 .from('service_requests')
                 .update({ 
-                  status: 'pending',
+                  status: 'cancelled',
                   mechanic_id: null, // Liberar el servicio
                 })
                 .eq('id', selectedServiceFromDashboard.id);
