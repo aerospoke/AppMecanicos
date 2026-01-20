@@ -298,9 +298,9 @@ export default function MechanicDashboardScreen() {
           </View>
 
           <Text style={styles.sectionTitle}>
-            {activeTab === 'pending' && '📋 Solicitudes Pendientes'}
-            {activeTab === 'in_progress' && '🔧 Servicios en Proceso'}
-            {activeTab === 'completed' && '✅ Servicios que Completé'}
+            {activeTab === 'pending' && 'Solicitudes pendientes'}
+            {activeTab === 'in_progress' && 'Servicios en proceso'}
+            {activeTab === 'completed' && 'Servicios completados'}
           </Text>
 
           {filteredRequests.length === 0 ? (

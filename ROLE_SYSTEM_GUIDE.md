@@ -191,7 +191,7 @@ export default function Dashboard() {
       case 'admin':
         return '⚡ Panel de Administrador';
       case 'mecanico':
-        return '🔧 Panel de Mecánico';
+        return 'Dashboard';
       case 'cliente':
         return '👤 Mi Panel';
       default:

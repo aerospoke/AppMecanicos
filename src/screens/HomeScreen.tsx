@@ -908,14 +908,6 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <View style={styles.headerButtons}>
-          {isMecanico(userRole) && (
-            <TouchableOpacity 
-              style={styles.dashboardBtn}
-              onPress={() => navigation.navigate('MechanicDashboard')}
-            >
-              <MaterialIcons name="dashboard" size={24} color="#fff" />
-            </TouchableOpacity>
-          )}
           <TouchableOpacity 
             style={styles.profileBtn}
             onPress={() => navigation.navigate('Profile')}
@@ -1005,6 +997,17 @@ export default function HomeScreen() {
         >
           <MaterialIcons name="my-location" size={24} color="#1f2937" />
         </TouchableOpacity>
+
+        {/* Botón de dashboard flotante (solo mecánicos) */}
+        {isMecanico(userRole) && (
+          <TouchableOpacity 
+            style={styles.dashboardBtn}
+            onPress={() => navigation.navigate('MechanicDashboard')}
+          >
+            <MaterialIcons name="dashboard" size={24} color="#fff" />
+            <Text style={styles.floatingBtnText}>Dashboard</Text>
+          </TouchableOpacity>
+        )}
 
         {/* Botón flotante para solicitar servicio (solo usuarios) */}
         {!isMecanico(userRole) && !myActiveService && (
