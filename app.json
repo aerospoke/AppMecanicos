@@ -19,7 +19,10 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.JbDeployments.AppMecanicos"
+      "bundleIdentifier": "com.JbDeployments.AppMecanicos",
+      "config": {
+        "googleMapsApiKey": "AIzaSyA_tKbW-gvj2bF_BPj2d_I0wFGBmPOKc_o"
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -27,7 +30,12 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.JbDeployments.AppMecanicos"
+      "package": "com.JbDeployments.AppMecanicos",
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyA_tKbW-gvj2bF_BPj2d_I0wFGBmPOKc_o"
+        }
+      }
     },
     "web": {
       "favicon": "./assets/favicon.png"

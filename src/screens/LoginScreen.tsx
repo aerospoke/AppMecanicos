@@ -10,6 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { signIn, signUp } from '../services/supabaseService';
@@ -85,8 +86,8 @@ export default function LoginScreen() {
       >
         <ScrollView contentContainerStyle={styles.scrollContainer}>
         <View style={styles.headerContainer}>
-          <Text style={styles.logo}>🔧</Text>
-          <Text style={styles.title}>App Mecánicos</Text>
+          <Image source={require('../../assets/logo2.png')} style={styles.logo} />
+          {/* <Text style={styles.title}>App Mecánicos</Text> */}
           <Text style={styles.subtitle}>
             {isLogin ? 'Inicia sesión para continuar' : 'Crea tu cuenta'}
           </Text>
@@ -209,6 +210,8 @@ const styles = StyleSheet.create({
     marginBottom: 40,
   },
   logo: {
+    width: 320, 
+    height: 320,
     fontSize: 60,
     marginBottom: 10,
   },

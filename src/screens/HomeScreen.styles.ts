@@ -137,6 +137,134 @@ export const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6b7280',
   },
+  // Estilos del acordeón
+  serviceAccordion: {
+    position: 'absolute',
+    bottom: 20,
+    left: 16,
+    right: 16,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+  },
+  accordionHeader: {
+    padding: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  accordionHeaderContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  accordionHeaderText: {
+    flex: 1,
+  },
+  accordionTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1f2937',
+  },
+  accordionSubtitle: {
+    fontSize: 12,
+    color: '#6b7280',
+  },
+  accordionActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  cancelButton: {
+    padding: 4,
+  },
+  accordionContent: {
+    paddingHorizontal: 12,
+    paddingBottom: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#f3f4f6',
+  },
+  stepsTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 12,
+    marginTop: 8,
+  },
+  stepsContainer: {
+    gap: 8,
+  },
+  stepItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  stepIndicator: {
+    alignItems: 'center',
+    position: 'relative',
+  },
+  stepCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f3f4f6',
+  },
+  stepCircleCompleted: {
+    backgroundColor: '#10b981',
+  },
+  stepCircleActive: {
+    backgroundColor: '#3b82f6',
+  },
+  stepCirclePending: {
+    backgroundColor: '#f3f4f6',
+  },
+  stepLine: {
+    position: 'absolute',
+    top: 32,
+    width: 2,
+    height: 16,
+    backgroundColor: '#e5e7eb',
+  },
+  stepLineCompleted: {
+    backgroundColor: '#10b981',
+  },
+  stepLabel: {
+    fontSize: 13,
+    color: '#6b7280',
+    flex: 1,
+  },
+  stepLabelActive: {
+    color: '#1f2937',
+    fontWeight: '600',
+  },
+  stepLabelCompleted: {
+    color: '#059669',
+    fontWeight: '500',
+  },
+  serviceDetails: {
+    marginTop: 12,
+    padding: 12,
+    backgroundColor: '#f9fafb',
+    borderRadius: 8,
+  },
+  serviceDetailsTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 4,
+  },
+  serviceDetailsText: {
+    fontSize: 12,
+    color: '#6b7280',
+    lineHeight: 16,
+  },
   serviceDetailBanner: {
     position: 'absolute',
     bottom: 20,

@@ -51,6 +51,7 @@ export default function HomeScreen() {
   const [routeDistance, setRouteDistance] = useState<string>('');
   const [routeDuration, setRouteDuration] = useState<string>('');
   const [mechanicLocation, setMechanicLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [accordionExpanded, setAccordionExpanded] = useState(false);
   // Estado local para mantener el servicio actualizado (mecánico)
   const [activeServiceForMechanic, setActiveServiceForMechanic] = useState<ServiceRequest | null>(null);
   // Refs para manejar suscripciones en tiempo real (cliente)
@@ -813,6 +814,24 @@ export default function HomeScreen() {
     return icons[serviceType] || 'build';
   };
 
+  const getServiceSteps = (currentStatus: string) => {
+    const steps = [
+      { key: 'pending', label: 'Buscando Mecánico', icon: 'search', color: '#f59e0b' },
+      { key: 'accepted', label: 'Mecánico en Camino', icon: 'directions-car', color: '#3b82f6' },
+      { key: 'arrived', label: 'Mecánico Llegó', icon: 'location-on', color: '#8b5cf6' },
+      { key: 'in_progress', label: 'Servicio en Progreso', icon: 'build', color: '#10b981' },
+    ];
+    
+    const currentStepIndex = steps.findIndex(step => step.key === currentStatus);
+    
+    return steps.map((step, index) => ({
+      ...step,
+      completed: index < currentStepIndex,
+      active: index === currentStepIndex,
+      pending: index > currentStepIndex,
+    }));
+  };
+
   const centerOnMyLocation = () => {
     if (currentLocation && mapRef.current) {
       mapRef.current.animateToRegion({
@@ -1025,29 +1044,92 @@ export default function HomeScreen() {
           </TouchableOpacity>
         )}
 
-        {/* Banner de servicio activo */}
+        {/* Banner de servicio activo con acordeón y pasos */}
         {myActiveService && 
          myActiveService.status !== 'completed' && 
          myActiveService.status !== 'cancelled' && (
-          <View style={styles.activeBanner}>
-            <View style={styles.activeBannerContent}>
-              <MaterialIcons name="build-circle" size={24} color="#10b981" />
-              <View style={styles.activeBannerText}>
-                <Text style={styles.activeBannerTitle}>
-                  {myActiveService.status === 'pending' && 'Buscando Mecánico...'}
-                  {myActiveService.status === 'accepted' && 'Mecánico en camino'}
-                  {myActiveService.status === 'arrived' && 'Mecánico ha llegado'}
-                  {myActiveService.status === 'in_progress' && 'Servicio en progreso'}
-                </Text>
-                <Text style={styles.activeBannerSubtitle}>
-                  {myActiveService.service_name || myActiveService.service_type}
-                  {routeDuration && myActiveService.status === 'accepted' && ` • Llega en ${routeDuration}`}
-                </Text>
+          <View style={styles.serviceAccordion}>
+            {/* Header del acordeón */}
+            <TouchableOpacity 
+              style={styles.accordionHeader}
+              onPress={() => setAccordionExpanded(!accordionExpanded)}
+            >
+              <View style={styles.accordionHeaderContent}>
+                <MaterialIcons name="build-circle" size={24} color="#10b981" />
+                <View style={styles.accordionHeaderText}>
+                  <Text style={styles.accordionTitle}>
+                    {myActiveService.status === 'pending' && 'Buscando Mecánico...'}
+                    {myActiveService.status === 'accepted' && 'Mecánico en camino'}
+                    {myActiveService.status === 'arrived' && 'Mecánico ha llegado'}
+                    {myActiveService.status === 'in_progress' && 'Servicio en progreso'}
+                  </Text>
+                  <Text style={styles.accordionSubtitle}>
+                    {myActiveService.service_name || myActiveService.service_type}
+                    {routeDuration && myActiveService.status === 'accepted' && ` • Llega en ${routeDuration}`}
+                  </Text>
+                </View>
               </View>
-            </View>
-            <TouchableOpacity onPress={handleCancelService}>
-              <MaterialIcons name="close" size={24} color="#ef4444" />
+              <View style={styles.accordionActions}>
+                <MaterialIcons 
+                  name={accordionExpanded ? "expand-less" : "expand-more"} 
+                  size={24} 
+                  color="#6b7280" 
+                />
+                <TouchableOpacity onPress={handleCancelService} style={styles.cancelButton}>
+                  <MaterialIcons name="close" size={20} color="#ef4444" />
+                </TouchableOpacity>
+              </View>
             </TouchableOpacity>
+
+            {/* Contenido expandible */}
+            {accordionExpanded && (
+              <View style={styles.accordionContent}>
+                <Text style={styles.stepsTitle}>Progreso del Servicio</Text>
+                <View style={styles.stepsContainer}>
+                  {getServiceSteps(myActiveService.status).map((step, index) => (
+                    <View key={step.key} style={styles.stepItem}>
+                      <View style={styles.stepIndicator}>
+                        <View style={[
+                          styles.stepCircle,
+                          step.completed && styles.stepCircleCompleted,
+                          step.active && styles.stepCircleActive,
+                          step.pending && styles.stepCirclePending,
+                        ]}>
+                          <MaterialIcons 
+                              name={step.completed ? "check" : step.icon as any} 
+                              size={16} 
+                              color={step.completed ? "#fff" : step.active ? "#fff" : "#9ca3af"}
+                            />
+                        </View>
+                        {index < 3 && (
+                          <View style={[
+                            styles.stepLine,
+                            step.completed && styles.stepLineCompleted,
+                          ]} />
+                        )}
+                      </View>
+                      <Text style={[
+                        styles.stepLabel,
+                        step.active && styles.stepLabelActive,
+                        step.completed && styles.stepLabelCompleted,
+                      ]}>
+                        {step.label}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+                
+                {/* Información adicional */}
+                {myActiveService.service_description && (
+                  <View style={styles.serviceDetails}>
+                    <Text style={styles.serviceDetailsTitle}>Detalles:</Text>
+                    <Text style={styles.serviceDetailsText}>
+                      {myActiveService.service_description}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            )}
           </View>
         )}
 
