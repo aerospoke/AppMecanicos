@@ -803,14 +803,14 @@ export default function HomeScreen() {
 
   const getServiceIcon = (serviceType: string): string => {
     const icons: { [key: string]: string } = {
-      'Cambio de Llanta': '🔧',
-      'Batería Descargada': '🔋',
-      'Falta de Gasolina': '⛽',
-      'Remolque': '🚗',
-      'Revisión General': '🔍',
-      'Otro': '💡',
+      'Cambio de Llanta': 'build',
+      'Batería Descargada': 'battery-alert',
+      'Falta de Gasolina': 'local-gas-station',
+      'Remolque': 'local-shipping',
+      'Revisión General': 'search',
+      'Otro': 'help-outline',
     };
-    return icons[serviceType] || '🔧';
+    return icons[serviceType] || 'build';
   };
 
   const centerOnMyLocation = () => {
@@ -1022,7 +1022,6 @@ export default function HomeScreen() {
             style={styles.floatingBtn}
             onPress={() => setShowServiceModal(true)}
           >
-            <MaterialIcons name="build" size={28} color="#fff" />
             <Text style={styles.floatingBtnText}>Solicitar Servicio</Text>
           </TouchableOpacity>
         )}
@@ -1037,9 +1036,9 @@ export default function HomeScreen() {
               <View style={styles.activeBannerText}>
                 <Text style={styles.activeBannerTitle}>
                   {myActiveService.status === 'pending' && 'Buscando Mecánico...'}
-                  {myActiveService.status === 'accepted' && '🚗 Mecánico en camino'}
-                  {myActiveService.status === 'arrived' && '📍 Mecánico ha llegado'}
-                  {myActiveService.status === 'in_progress' && '🔧 Servicio en progreso'}
+                  {myActiveService.status === 'accepted' && 'Mecánico en camino'}
+                  {myActiveService.status === 'arrived' && 'Mecánico ha llegado'}
+                  {myActiveService.status === 'in_progress' && 'Servicio en progreso'}
                 </Text>
                 <Text style={styles.activeBannerSubtitle}>
                   {myActiveService.service_name || myActiveService.service_type}
@@ -1086,7 +1085,7 @@ export default function HomeScreen() {
                   style={styles.acceptBtn}
                   onPress={handleAcceptService}
                 >
-                  <Text style={styles.acceptBtnText}>✅ Aceptar Servicio</Text>
+                  <Text style={styles.acceptBtnText}>Aceptar Servicio</Text>
                 </TouchableOpacity>
               )}
 
@@ -1096,13 +1095,13 @@ export default function HomeScreen() {
                     style={[styles.acceptBtn, { backgroundColor: '#f59e0b' }]}
                     onPress={handleArrived}
                   >
-                    <Text style={styles.acceptBtnText}>📍 He Llegado</Text>
+                    <Text style={styles.acceptBtnText}>He Llegado</Text>
                   </TouchableOpacity>
                   <TouchableOpacity 
                     style={[styles.acceptBtn, { backgroundColor: '#ef4444' }]}
                     onPress={handleMechanicCancelService}
                   >
-                    <Text style={styles.acceptBtnText}>❌ Cancelar Servicio</Text>
+                    <Text style={styles.acceptBtnText}>Cancelar Servicio</Text>
                   </TouchableOpacity>
                 </>
               )}
@@ -1110,16 +1109,16 @@ export default function HomeScreen() {
               {activeServiceForMechanic.status === 'arrived' && (
                 <>
                   <TouchableOpacity 
-                    style={[styles.acceptBtn, { backgroundColor: '#3b82f6' }]}
+                    style={[styles.acceptBtn, { backgroundColor: '#000000ff' }]}
                     onPress={handleStartWork}
                   >
-                    <Text style={styles.acceptBtnText}>🔧 Iniciar Trabajo</Text>
+                    <Text style={styles.acceptBtnText}>Iniciar Trabajo</Text>
                   </TouchableOpacity>
                   <TouchableOpacity 
                     style={[styles.acceptBtn, { backgroundColor: '#ef4444' }]}
                     onPress={handleMechanicCancelService}
                   >
-                    <Text style={styles.acceptBtnText}>❌ Cancelar</Text>
+                    <Text style={styles.acceptBtnText}>Cancelar</Text>
                   </TouchableOpacity>
                 </>
               )}
@@ -1130,19 +1129,19 @@ export default function HomeScreen() {
                     style={[styles.acceptBtn, { backgroundColor: '#10b981' }]}
                     onPress={handleCompleteService}
                   >
-                    <Text style={styles.acceptBtnText}>✅ Completar Servicio</Text>
+                    <Text style={styles.acceptBtnText}>Completar Servicio</Text>
                   </TouchableOpacity>
                   <TouchableOpacity 
                     style={[styles.acceptBtn, { backgroundColor: '#6b7280' }]}
                     onPress={() => {
                       Alert.alert(
-                        'ℹ️ Información del Servicio',
+                        ' Información del Servicio',
                         `Servicio: ${activeServiceForMechanic.service_name || activeServiceForMechanic.service_type}\n\nDescripción: ${activeServiceForMechanic.service_description || 'Sin descripción'}\n\nEstado: Trabajando en el vehículo`,
                         [{ text: 'OK' }]
                       );
                     }}
                   >
-                    <Text style={styles.acceptBtnText}>ℹ️ Más Info</Text>
+                    <Text style={styles.acceptBtnText}>Más Info</Text>
                   </TouchableOpacity>
                 </>
               )}
@@ -1169,12 +1168,12 @@ export default function HomeScreen() {
             
             <ScrollView style={styles.serviceList}>
               {[
-                { type: 'Cambio de Llanta', icon: '🔧', desc: 'Cambio o reparación de llantas', desc2: "¿Tu llanta decidió 'tomar una siesta' en medio del camino? A veces el asfalto muerde, pero no te preocupes, nosotros traemos la curita (y el gato hidráulico).", image: require('../../assets/wheel-flat.png') },
-                { type: 'Batería Descargada', icon: '🔋', desc: 'Auxilio con batería', desc2: "¿Tu batería se declaró en huelga de brazos caídos? Dale, que todos tenemos días de 'baja energía'. Nosotros llegamos con los cables mágicos para revivirla como en las películas. ¡Frankenstein estaría orgulloso!", image: require('../../assets/electric-damage.png') },
-                { type: 'Falta de Gasolina', icon: '⛽', desc: 'Servicio de gasolina', desc2: "¿El tanque decidió hacer dieta sin avisarte? Tranquilo, hasta los mejores olvidan parar en la gasolinera. Te llevamos combustible para que tu auto deje de hacerse el dramático.", image: require('../../assets/without-gasoline.png') },
-                { type: 'Remolque', icon: '🚗', desc: 'Servicio de grúa', desc2: "¿Tu auto dijo 'hoy no me levanto de la cama'? A veces necesitan un taxi VIP. Nuestra grúa lo llevará con todo el glamour que merece, como una estrella de cine en su limusina.", image: require('../../assets/grua.png') },
-                { type: 'Revisión General', icon: '🔍', desc: 'Diagnóstico del vehículo', desc2: "¿Tu auto suena como orquesta desafinada? Ruidos, vibraciones, lucecitas misteriosas... Somos los detectives de motores. CSI Automotriz a tu servicio. ", image: require('../../assets/engine-dmaged.png') },
-                { type: 'Otro', icon: '💡', desc: 'Otro tipo de servicio', desc2: "¿Tu problema es tan único que ni Google lo entiende? ¡Nos encantan los retos! Cuéntanos qué locura le pasó a tu auto y lo resolveremos juntos. Nada nos asusta... bueno, casi nada.", image: require('../../assets/not-idea-error.png') },
+                { type: 'Cambio de Llanta', icon: 'build', desc: 'Cambio o reparación de llantas', desc2: "¿Tu llanta decidió 'tomar una siesta' en medio del camino? A veces el asfalto muerde, pero no te preocupes, nosotros traemos la curita (y el gato hidráulico).", image: require('../../assets/wheel-flat.png') },
+                { type: 'Batería Descargada', icon: 'battery-alert', desc: 'Auxilio con batería', desc2: "¿Tu batería se declaró en huelga de brazos caídos? Dale, que todos tenemos días de 'baja energía'. Nosotros llegamos con los cables mágicos para revivirla como en las películas. ¡Frankenstein estaría orgulloso!", image: require('../../assets/electric-damage.png') },
+                { type: 'Falta de Gasolina', icon: 'local-gas-station', desc: 'Servicio de gasolina', desc2: "¿El tanque decidió hacer dieta sin avisarte? Tranquilo, hasta los mejores olvidan parar en la gasolinera. Te llevamos combustible para que tu auto deje de hacerse el dramático.", image: require('../../assets/without-gasoline.png') },
+                { type: 'Remolque', icon: 'local-shipping', desc: 'Servicio de grúa', desc2: "¿Tu auto dijo 'hoy no me levanto de la cama'? A veces necesitan un taxi VIP. Nuestra grúa lo llevará con todo el glamour que merece, como una estrella de cine en su limusina.", image: require('../../assets/grua.png') },
+                { type: 'Revisión General', icon: 'search', desc: 'Diagnóstico del vehículo', desc2: "¿Tu auto suena como orquesta desafinada? Ruidos, vibraciones, lucecitas misteriosas... Somos los detectives de motores. CSI Automotriz a tu servicio. ", image: require('../../assets/engine-dmaged.png') },
+                { type: 'Otro', icon: 'help-outline', desc: 'Otro tipo de servicio', desc2: "¿Tu problema es tan único que ni Google lo entiende? ¡Nos encantan los retos! Cuéntanos qué locura le pasó a tu auto y lo resolveremos juntos. Nada nos asusta... bueno, casi nada.", image: require('../../assets/not-idea-error.png') },
               ].map((service, index) => (
                 <TouchableOpacity
                   key={index}
@@ -1185,7 +1184,7 @@ export default function HomeScreen() {
                     setShowServiceDetailModal(true);
                   }}
                 >
-                  <Text style={styles.serviceIcon}>{service.icon}</Text>
+                  <MaterialIcons style={styles.materialIcon} name={service.icon as any} size={32} color="#306bd3ff" />
                   <View style={styles.serviceInfo}>
                     <Text style={styles.serviceName}>{service.type}</Text>
                     <Text style={styles.serviceDesc}>{service.desc}</Text>
@@ -1261,7 +1260,7 @@ export default function HomeScreen() {
                     setShowServiceModal(true);
                   }}
                 >
-                  <Text style={styles.modernBackBtnText}>volver</Text>
+                  <Text style={styles.modernBackBtnText}>Volver</Text>
                 </TouchableOpacity>
               </>
             )}

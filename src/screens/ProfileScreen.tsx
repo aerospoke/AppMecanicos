@@ -150,7 +150,7 @@ export default function ProfileScreen() {
       // Refrescar el perfil en el contexto
       await refreshProfile();
       
-      Alert.alert('✅ Perfil Actualizado', 'Tu información se guardó correctamente');
+      Alert.alert('Perfil Actualizado', 'Tu información se guardó correctamente');
       setShowEditModal(false);
     } catch (error: any) {
       Alert.alert('Error', error.message || 'No se pudo actualizar el perfil');
@@ -184,7 +184,7 @@ export default function ProfileScreen() {
   // 🔥 FUNCIÓN REAL: Eliminar cuenta (con confirmación)
   const handleDeleteAccount = async () => {
     Alert.alert(
-      '⚠️ Eliminar Cuenta',
+      ' Eliminar Cuenta',
       'Esta acción es irreversible. ¿Estás seguro de que deseas eliminar tu cuenta permanentemente?',
       [
         { text: 'Cancelar', style: 'cancel' },
@@ -251,18 +251,6 @@ export default function ProfileScreen() {
             )}
 
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Rol:</Text>
-              <View style={styles.roleContainer}>
-                <Text style={styles.roleEmoji}>
-                  {userRole ? getRoleEmoji(userRole) : '❓'}
-                </Text>
-                <Text style={styles.roleValue}>
-                  {userRole ? getRoleName(userRole) : 'No asignado'}
-                </Text>
-              </View>
-            </View>
-
-            <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Usuario desde:</Text>
               <Text style={styles.infoValue}>
                 {new Date(user.created_at).toLocaleDateString()}
@@ -270,10 +258,10 @@ export default function ProfileScreen() {
             </View>
           </>
         )}
-      </View>
+     
 
       {/* DEBUG: Push Token Status */}
-      <View style={styles.debugCard}>
+      {/* <View style={styles.debugCard}>
         <Text style={styles.debugTitle}>🔔 Estado Push Token</Text>
         <Text style={styles.debugStatus}>{tokenStatus}</Text>
         {pushToken && (
@@ -291,9 +279,9 @@ export default function ProfileScreen() {
         >
           <Text style={styles.testButtonText}>🔥 Probar Supabase READ/WRITE</Text>
         </TouchableOpacity>
-      </View>
+      </View> */}
 
-      <View style={styles.card}>
+      
         <Text style={styles.cardTitle}>Configuración</Text>
         
         <TouchableOpacity 
@@ -352,7 +340,7 @@ export default function ProfileScreen() {
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>✏️ Editar Perfil</Text>
+            <Text style={styles.modalTitle}>Editar Perfil</Text>
             <TouchableOpacity onPress={() => setShowEditModal(false)}>
               <MaterialIcons name="close" size={24} color="#6b7280" />
             </TouchableOpacity>
@@ -387,7 +375,7 @@ export default function ProfileScreen() {
             disabled={isSaving}
           >
             <Text style={styles.saveButtonText}>
-              {isSaving ? 'Guardando...' : '💾 Guardar Cambios'}
+              {isSaving ? 'Guardando...' : 'Guardar Cambios'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -603,7 +591,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: '#374151',
-    marginBottom: 16,
+    marginVertical: 16,
   },
   infoRow: {
     flexDirection: 'row',

@@ -232,6 +232,9 @@ export const styles = StyleSheet.create({
     color: '#1f2937',
     marginBottom: 2,
   },
+  materialIcon: {
+    marginRight: 16,
+  },
   serviceDesc: {
     fontSize: 13,
     color: '#6b7280',
@@ -365,8 +368,8 @@ export const styles = StyleSheet.create({
     width: '100%',
   },
   modernServiceImage: {
-    width: 300,
-    height: 200,
+    width: 400,
+    height: 320,
     borderRadius: 16,
   },
   serviceInfoContainer: {
