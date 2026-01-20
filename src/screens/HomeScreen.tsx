@@ -916,7 +916,6 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>🔧 Mecánicos Cerca</Text>
         <View style={styles.headerButtons}>
           {isMecanico(userRole) && (
             <TouchableOpacity 

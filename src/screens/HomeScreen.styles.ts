@@ -9,10 +9,14 @@ export const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
     alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#1f2937',
+    padding: 35,
+    backgroundColor: 'transparent',
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    zIndex: 10,
   },
   headerTitle: {
     fontSize: 20,
@@ -30,7 +34,11 @@ export const styles = StyleSheet.create({
   },
   profileBtn: {
     backgroundColor: '#6366f1',
-    borderRadius: 8,
+    width: 50,
+    height: 50,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 80,
     padding: 8,
   },
   mapContainer: {
