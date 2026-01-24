@@ -10,9 +10,9 @@
     },
     "preview": {
       "distribution": "internal",
+      "extends": "production",
       "android": {
-        "buildType": "apk",
-        "credentialsSource": "remote"
+        "buildType": "apk"
       }
     },
     "production": {
