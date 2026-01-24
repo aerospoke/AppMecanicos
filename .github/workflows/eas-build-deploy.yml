@@ -41,7 +41,7 @@ jobs:
         run: npm ci
 
       - name: Build preview for Android
-        run: eas build --platform android --profile preview --non-interactive
+        run: eas build --platform android --profile qa --non-interactive
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
