@@ -449,22 +449,26 @@ export default function HomeScreen() {
         longitude: -74.0721,
       };
 
+      console.log('🔍 Solicitando permisos de ubicación...');
       const { status } = await Location.requestForegroundPermissionsAsync();
       
       if (status === 'granted') {
         try {
+          console.log('✅ Permisos concedidos, obteniendo ubicación...');
           const location = await Location.getCurrentPositionAsync({
-            accuracy: Location.Accuracy.Balanced,
-            timeInterval: 10000,
-            distanceInterval: 10,
+            accuracy: Location.Accuracy.High,
           });
-          setCurrentLocation({
+          
+          const userLocation = {
             latitude: location.coords.latitude,
             longitude: location.coords.longitude,
-          });
-          console.log('✅ Ubicación obtenida:', location.coords);
+          };
+          
+          setCurrentLocation(userLocation);
+          console.log('✅ Ubicación obtenida:', userLocation);
         } catch (locError) {
-          console.log('⚠️ Error obteniendo ubicación, usando por defecto');
+          console.log('⚠️ Error obteniendo ubicación GPS:', locError);
+          console.log('🔄 Usando ubicación por defecto');
           setCurrentLocation(defaultLocation);
         }
       } else {
@@ -983,9 +987,25 @@ export default function HomeScreen() {
           </MapView>
         ) : (
           <View style={styles.loadingContainer}>
+            <MaterialIcons name="map" size={64} color="#3b82f6" />
             <Text style={styles.loadingText}>🗺️ Cargando mapa de Google...</Text>
             <Text style={styles.loadingSubtext}>
-              {isLoadingMap ? 'Obteniendo tu ubicación...' : 'Casi listo...'}
+              {isLoadingMap ? 'Obteniendo tu ubicación...' : 'Verificando permisos...'}
+            </Text>
+            
+            <TouchableOpacity 
+              style={styles.retryButton}
+              onPress={loadLocationAndServices}
+            >
+              <MaterialIcons name="refresh" size={24} color="#fff" />
+              <Text style={styles.retryButtonText}>Reintentar</Text>
+            </TouchableOpacity>
+            
+            <Text style={styles.troubleshootText}>
+              💡 Si el mapa no carga, verifica que:
+              {'\n'}• Los servicios de ubicación estén activados
+              {'\n'}• La app tenga permisos de ubicación
+              {'\n'}• Google Play Services esté actualizado
             </Text>
           </View>
         )}
