@@ -10,14 +10,6 @@
     },
     "preview": {
       "distribution": "internal",
-      "extends": "production",
-      "android": {
-        "buildType": "apk"
-      }
-    },
-    "qa": {
-      "extends": "production",
-      "distribution": "internal",
       "android": {
         "buildType": "apk"
       }
