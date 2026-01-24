@@ -1,17 +1,12 @@
 {
   "expo": {
     "name": "AppMecanicos",
-    "slug": "AppMecanicos",
+    "slug": "app-mecanicos",
     "version": "4.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
-    "extra": {
-      "eas": {
-        "projectId": "b50a6bad-ca1f-4ecb-8744-468379871f0"
-      }
-    },
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -39,6 +34,12 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "b50a6bad-ca1f-4ecb-8744-4683798713f0"
+      }
+    },
+    "owner": "jonathanbf2000"
   }
 }
