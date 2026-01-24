@@ -33,6 +33,9 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
 
+      - name: Setup Yarn (required by expo-github-action)
+        run: npm install -g yarn
+
       - name: Setup EAS
         uses: expo/expo-github-action@v8
         with:
@@ -67,6 +70,9 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
+
+      - name: Setup Yarn (required by expo-github-action)
+        run: npm install -g yarn
 
       - name: Setup EAS
         uses: expo/expo-github-action@v8
@@ -106,6 +112,9 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
+
+      - name: Setup Yarn (required by expo-github-action)
+        run: npm install -g yarn
 
       - name: Setup EAS
         uses: expo/expo-github-action@v8
