@@ -14,7 +14,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.JbDeployments.AppMecanicos",
+      "bundleIdentifier": "com.JbDeployments.AppMecanicos2026",
       "config": {
         "googleMapsApiKey": "AlzaSyAncz2JlSDVyL21Ywo9gDZyQUAPPxjgrnw"
       }
@@ -25,7 +25,7 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.JbDeployments.AppMecanicos",
+      "package": "com.JbDeployments.AppMecanicos2026",
       "config": {
         "googleMaps": {
           "apiKey": "AlzaSyAncz2JlSDVyL21Ywo9gDZyQUAPPxjgrnw"

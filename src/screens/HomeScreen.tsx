@@ -472,7 +472,6 @@ export default function HomeScreen() {
           setCurrentLocation(defaultLocation);
         }
       } else {
-        console.log('⚠️ Permisos no concedidos, usando ubicación por defecto');
         setCurrentLocation(defaultLocation);
       }
 
