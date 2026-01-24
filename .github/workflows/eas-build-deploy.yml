@@ -39,11 +39,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Authenticate with Expo
-        run: echo "${{ secrets.EXPO_TOKEN }}" | eas auth:login --non-interactive
-
       - name: Build preview for Android
         run: eas build --platform android --profile preview --non-interactive
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
   build-production:
     name: Build Production
@@ -73,11 +72,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Authenticate with Expo
-        run: echo "${{ secrets.EXPO_TOKEN }}" | eas auth:login --non-interactive
-
       - name: Build for Android
         run: eas build --platform android --profile production --non-interactive
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
       # Uncomment when you want to build for iOS too
       # - name: Build for iOS
@@ -111,10 +109,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Authenticate with Expo
-        run: echo "${{ secrets.EXPO_TOKEN }}" | eas auth:login --non-interactive
-
       - name: Build and submit to stores
         run: |
           eas build --platform android --profile production --non-interactive
           eas submit --platform android --latest --non-interactive
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}

@@ -34,8 +34,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Authenticate with Expo
-        run: echo "${{ secrets.EXPO_TOKEN }}" | eas auth:login --non-interactive
-
       - name: Build on EAS
         run: eas build --platform android --profile production --non-interactive
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
