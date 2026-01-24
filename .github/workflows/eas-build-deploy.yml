@@ -15,6 +15,7 @@ jobs:
   build-preview:
     name: Build Preview (PR)
     runs-on: ubuntu-latest
+    environment: PREVIEW
     if: github.event_name == 'pull_request'
     steps:
       - name: Check for EXPO_TOKEN
