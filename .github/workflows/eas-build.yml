@@ -10,6 +10,7 @@ jobs:
   build:
     name: Install and build
     runs-on: ubuntu-latest
+    environment: PRODUCCION
     steps:
       - name: Check for EXPO_TOKEN
         run: |
