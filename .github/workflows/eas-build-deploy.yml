@@ -12,10 +12,10 @@ env:
   NODE_VERSION: 18.x
 
 jobs:
-  build-preview:
-    name: Build Preview (PR)
+  build-qa:
+    name: Build QA (PR)
     runs-on: ubuntu-latest
-    environment: PREVIEW
+    environment: QA
     if: github.event_name == 'pull_request'
     steps:
       - name: Check for EXPO_TOKEN
