@@ -47,13 +47,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (!error && data) {
         console.log('✅ Perfil cargado:', data);
         setUserProfile(data as UserProfile);
-        setUserRole(data.rol as 'usuario' | 'mecanico' | 'admin');
-        
-        // Registrar token de notificaciones de forma asíncrona (sin await)
-        console.log('📱 Registrando push token para:', data.rol);
-        // registerPushToken(userId).catch(error => 
-        //   console.log('❌ Error en registro asíncrono de token:', error)
-        // );
+        const role = data.rol as 'usuario' | 'mecanico' | 'admin';
+        setUserRole(role);
+
+        // Registrar/solicitar permisos de notificaciones para TODOS los roles.
+        // El helper solicitará permisos si no están concedidos y guardará el token.
+        console.log('📱 Intentando registrar push token (todos los roles)...');
+        registerPushToken(userId).catch(error =>
+          console.log('❌ Error en registro asíncrono de token:', error)
+        );
       } else {
         console.log('⚠️ Error cargando perfil o no existe');
         // Si no existe perfil, asignar rol por defecto 'usuario'

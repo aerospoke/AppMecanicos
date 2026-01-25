@@ -127,6 +127,23 @@ export async function getMechanicTokens(): Promise<string[]> {
 }
 
 /**
+ * Obtener tokens de todos los usuarios con push_token registrado (sin filtrar por rol)
+ */
+export async function getAllUserTokens(): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('push_token')
+    .not('push_token', 'is', null);
+
+  if (error) {
+    console.error('❌ Error obteniendo tokens de usuarios:', error);
+    return [];
+  }
+
+  return data.map(profile => profile.push_token).filter(Boolean);
+}
+
+/**
  * Enviar notificación push a mecánicos
  * Usa la API de Expo Push Notifications
  */
@@ -175,6 +192,50 @@ export async function sendPushToMechanics(
 }
 
 /**
+ * Enviar notificación push a TODOS los usuarios con token registrado
+ */
+export async function sendPushToAll(
+  title: string,
+  body: string,
+  data?: any
+) {
+  try {
+    const tokens = await getAllUserTokens();
+
+    if (tokens.length === 0) {
+      console.log('⚠️ No hay usuarios con tokens registrados');
+      return { success: false, message: 'No hay destinatarios disponibles' };
+    }
+
+    const messages = tokens.map(token => ({
+      to: token,
+      sound: 'default',
+      title,
+      body,
+      data: data || {},
+      priority: 'high',
+    }));
+
+    const response = await fetch('https://exp.host/--/api/v2/push/send', {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(messages),
+    });
+
+    const result = await response.json();
+    console.log('📤 Notificaciones enviadas (todos):', result);
+
+    return { success: true, result };
+  } catch (error) {
+    console.error('❌ Error enviando notificaciones a todos:', error);
+    return { success: false, error };
+  }
+}
+
+/**
  * Configurar listener para cuando se recibe una notificación
  */
 export function addNotificationReceivedListener(
@@ -190,4 +251,42 @@ export function addNotificationResponseReceivedListener(
   callback: (response: Notifications.NotificationResponse) => void
 ) {
   return Notifications.addNotificationResponseReceivedListener(callback);
+}
+
+/**
+ * Enviar una notificación local inmediata al dispositivo actual
+ * Requiere permisos de notificaciones concedidos
+ */
+export async function sendLocalNotification(
+  title: string,
+  body: string,
+  data?: any
+) {
+  try {
+    // Verificar permisos; si no están otorgados, solicitarlos
+    const { status } = await Notifications.getPermissionsAsync();
+    if (status !== 'granted') {
+      const req = await Notifications.requestPermissionsAsync();
+      if (req.status !== 'granted') {
+        console.log('❌ Permisos de notificaciones no concedidos para notificación local');
+        return { success: false, message: 'Permisos no concedidos' };
+      }
+    }
+
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title,
+        body,
+        data: data || {},
+        sound: 'default',
+      },
+      // trigger null => enviar inmediatamente
+      trigger: null,
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error('❌ Error enviando notificación local:', error);
+    return { success: false, error };
+  }
 }

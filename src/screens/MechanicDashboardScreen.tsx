@@ -207,7 +207,7 @@ export default function MechanicDashboardScreen() {
           >
             <MaterialIcons name="arrow-back" size={24} color="#1f2937" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>🔧 Panel de Mecánico</Text>
+          <Text style={styles.headerTitle}>Dashboard</Text>
           <TouchableOpacity style={styles.refreshBtn} onPress={loadRequests}>
             <MaterialIcons name="refresh" size={24} color="#667eea" />
           </TouchableOpacity>

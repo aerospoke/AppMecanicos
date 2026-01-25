@@ -16,7 +16,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.JbDeployments.AppMecanicos2026",
       "config": {
-        "googleMapsApiKey": "AlzaSyAncz2JlSDVyL21Ywo9gDZyQUAPPxjgrnw"
+        "googleMapsApiKey": "AIzaSyAkzSvXFQgDMOyTvdO0elKSUDK7nCOygFM"
       }
     },
     "android": {
@@ -28,7 +28,7 @@
       "package": "com.JbDeployments.AppMecanicos2026",
       "config": {
         "googleMaps": {
-          "apiKey": "AlzaSyAncz2JlSDVyL21Ywo9gDZyQUAPPxjgrnw"
+          "apiKey": "AIzaSyAkzSvXFQgDMOyTvdO0elKSUDK7nCOygFM"
         }
       }
     },

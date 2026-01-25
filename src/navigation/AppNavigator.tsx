@@ -4,9 +4,11 @@ import { useAuth } from '../context/AuthContext';
 
 // Screens
 import LoginScreen from '../screens/LoginScreen';
-import HomeScreen from '../screens/HomeScreen';
+import HomeScreen from '../screens/homeScreen/HomeScreen';
+import ServicesScreen from '../screens/servicesScreen/ServicesScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import MechanicDashboardScreen from '../screens/MechanicDashboardScreen';
+import PruebasScreen from '../screens/PruebasScreen';
 import TestSupabaseScreen from '../screens/TestSupabaseScreen';
 
 // Definir tipos para la navegación
@@ -16,6 +18,8 @@ export type RootStackParamList = {
   Profile: undefined;
   MechanicDashboard: undefined;
   TestSupabase: undefined;
+  Pruebas: undefined;
+  Services: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -41,6 +45,7 @@ export default function AppNavigator() {
         // Usuario autenticado - Pantallas principales
         <>
           <Stack.Screen name="Home" component={HomeScreen} />
+          <Stack.Screen name="Services" component={ServicesScreen} />
           <Stack.Screen 
             name="Profile" 
             component={ProfileScreen}
@@ -52,6 +57,10 @@ export default function AppNavigator() {
           <Stack.Screen 
             name="TestSupabase" 
             component={TestSupabaseScreen}
+          />
+          <Stack.Screen 
+            name="Pruebas" 
+            component={PruebasScreen}
           />
         </>
       )}

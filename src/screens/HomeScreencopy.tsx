@@ -13,7 +13,7 @@ import { createServiceRequest } from '../services/supabaseService';
 import { sendPushToMechanics } from '../services/notificationService';
 import { startMechanicTracking, stopMechanicTracking, subscribeMechanicLocation, updateServiceStatus } from '../services/trackingService';
 import { RootStackParamList } from '../navigation/AppNavigator';
-import { styles } from './HomeScreen.styles';
+import { styles } from './homeScreen/HomeScreen.styles';
 
 type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 type HomeScreenRouteProp = RouteProp<RootStackParamList, 'Home'>;
@@ -31,7 +31,7 @@ interface ServiceRequest {
   created_at: string;
 }
 
-export default function HomeScreen() {
+export default function HomeScreencopy() {
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const route = useRoute<HomeScreenRouteProp>();
   const { userRole, user } = useAuth();
@@ -826,14 +826,18 @@ export default function HomeScreen() {
 
   const getDirections = async (origin: { latitude: number; longitude: number }, destination: { latitude: number; longitude: number }) => {
     try {
-      const apiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || process.env.GOOGLE_MAPS_API_KEY || '';
+      const apiKey = process.env.EXPO_PUBLIC_GOOGLE_DIRECTIONS_API_KEY || process.env.GOOGLE_DIRECTIONS_API_KEY || process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || process.env.GOOGLE_MAPS_API_KEY || '';
+      console.log("🚀 ~ getDirections ~ apiKey:", apiKey)
+
+      
       if (!apiKey) {
-        console.warn('⚠️ Google Maps API key no configurada. Define EXPO_PUBLIC_GOOGLE_MAPS_API_KEY o GOOGLE_MAPS_API_KEY.');
+        console.warn('⚠️ Google Directions API key no configurada. Define EXPO_PUBLIC_GOOGLE_DIRECTIONS_API_KEY, GOOGLE_DIRECTIONS_API_KEY o usa EXPO_PUBLIC_GOOGLE_MAPS_API_KEY/GOOGLE_MAPS_API_KEY (no recomendado para web services).');
         return;
       }
       const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${origin.latitude},${origin.longitude}&destination=${destination.latitude},${destination.longitude}&key=${apiKey}`;
       
       const response = await fetch(url);
+      console.log("🚀 ~ getDirections ~ response:", response)
       const data = await response.json();
 
       if (data.status === 'OK' && data.routes.length > 0) {
