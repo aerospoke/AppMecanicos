@@ -127,6 +127,23 @@ export async function getMechanicTokens(): Promise<string[]> {
 }
 
 /**
+ * Obtener tokens de todos los usuarios con push_token registrado (sin filtrar por rol)
+ */
+export async function getAllUserTokens(): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('push_token')
+    .not('push_token', 'is', null);
+
+  if (error) {
+    console.error('❌ Error obteniendo tokens de usuarios:', error);
+    return [];
+  }
+
+  return data.map(profile => profile.push_token).filter(Boolean);
+}
+
+/**
  * Enviar notificación push a mecánicos
  * Usa la API de Expo Push Notifications
  */
@@ -170,6 +187,50 @@ export async function sendPushToMechanics(
     return { success: true, result };
   } catch (error) {
     console.error('❌ Error enviando notificaciones:', error);
+    return { success: false, error };
+  }
+}
+
+/**
+ * Enviar notificación push a TODOS los usuarios con token registrado
+ */
+export async function sendPushToAll(
+  title: string,
+  body: string,
+  data?: any
+) {
+  try {
+    const tokens = await getAllUserTokens();
+
+    if (tokens.length === 0) {
+      console.log('⚠️ No hay usuarios con tokens registrados');
+      return { success: false, message: 'No hay destinatarios disponibles' };
+    }
+
+    const messages = tokens.map(token => ({
+      to: token,
+      sound: 'default',
+      title,
+      body,
+      data: data || {},
+      priority: 'high',
+    }));
+
+    const response = await fetch('https://exp.host/--/api/v2/push/send', {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(messages),
+    });
+
+    const result = await response.json();
+    console.log('📤 Notificaciones enviadas (todos):', result);
+
+    return { success: true, result };
+  } catch (error) {
+    console.error('❌ Error enviando notificaciones a todos:', error);
     return { success: false, error };
   }
 }

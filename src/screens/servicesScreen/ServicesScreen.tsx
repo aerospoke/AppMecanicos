@@ -8,7 +8,7 @@ import { styles } from './ServicesScreen.styles';
 import * as Location from 'expo-location';
 import { Alert } from 'react-native';
 import { createServiceRequest } from '../../services/supabaseService';
-import { sendPushToMechanics, sendLocalNotification } from '../../services/notificationService';
+import { sendPushToMechanics } from '../../services/notificationService';
 
 type ServiceItem = {
 	type: string;
@@ -127,10 +127,7 @@ export default function ServicesScreen() {
 			const coords = currentLocation ?? { latitude: 4.711, longitude: -74.0721 };
 
 			if (usingDefaultLocation) {
-				await sendLocalNotification(
-					'Ubicación por defecto',
-					'No se pudo obtener tu ubicación; usaremos Bogotá como referencia.'
-				);
+				Alert.alert('Ubicación por defecto', 'No se pudo obtener tu ubicación; usaremos Bogotá como referencia.');
 			}
 
 			try {
@@ -145,26 +142,26 @@ export default function ServicesScreen() {
 				});
 
 				if (error || !data) {
-					await sendLocalNotification('Error', 'No se pudo crear la solicitud');
+					Alert.alert('Error', 'No se pudo crear la solicitud');
 					setSubmitting(false);
 					return;
 				}
 
 				await sendPushToMechanics(
-					'🚨 Nueva Solicitud de Servicio',
-					`Servicio: ${selectedService.type}${description ? ' - ' + description : ''}`,
+					'🔔 Hay un nuevo servicio disponible',
+					'Hay un nuevo servicio disponible',
 					{ serviceId: data.id, type: selectedService.type }
 				);
 
-				await sendLocalNotification('¡Solicitud Creada!', 'Un mecánico cercano será notificado', {
-					serviceId: data.id,
-					serviceType: selectedService.type,
-				});
-				handleBackToList();
-				navigation.goBack();
+				Alert.alert('¡Solicitud Creada!', 'Un mecánico cercano será notificado', [
+					{ text: 'OK', onPress: () => {
+						handleBackToList();
+						navigation.goBack();
+					}}
+				]);
 			} catch (e) {
 				console.error('Error creando servicio desde ServicesScreen:', e);
-				await sendLocalNotification('Error', 'Ocurrió un error al crear la solicitud');
+				Alert.alert('Error', 'Ocurrió un error al crear la solicitud');
 			} finally {
 				setSubmitting(false);
 			}
