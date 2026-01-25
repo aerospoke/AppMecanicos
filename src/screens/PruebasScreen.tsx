@@ -1,173 +1,297 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Platform } from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as Location from 'expo-location';
-import { MaterialIcons } from '@expo/vector-icons';
-import Constants from 'expo-constants';
+import MapView, { Marker, PROVIDER_GOOGLE, Region } from 'react-native-maps';
+import PrincipalMap from '../components/principalMap/principalMap';
+
+class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean; error?: any }> {
+	constructor(props: { children: React.ReactNode }) {
+		super(props);
+		this.state = { hasError: false };
+	}
+	static getDerivedStateFromError(error: any) {
+		return { hasError: true, error };
+	}
+	render() {
+		if (this.state.hasError) {
+			return (
+				<View style={styles.cardError}>
+					<Text style={styles.cardTitle}>Mapa</Text>
+					<Text style={styles.fail}>Fallo al renderizar el mapa</Text>
+					<Text style={styles.small}>{String(this.state.error)}</Text>
+				</View>
+			);
+		}
+		return this.props.children as any;
+	}
+}
+
+type Check = {
+	label: string;
+	status: 'pending' | 'ok' | 'fail';
+	detail?: string;
+};
 
 export default function PruebasScreen() {
-  const [logs, setLogs] = useState<string[]>([]);
-  const [result, setResult] = useState<Record<string, { ok: boolean; detail?: string }>>({});
-  const [currentLocation, setCurrentLocation] = useState<{ latitude: number; longitude: number } | null>(null);
-  const mapRef = useRef<MapView>(null);
+	const [checks, setChecks] = useState<Record<string, Check>>({
+		locationPermission: { label: 'Permiso de ubicación', status: 'pending' },
+		currentLocation: { label: 'Ubicación actual obtenida', status: 'pending' },
+		mapReady: { label: 'Google Maps cargó correctamente', status: 'pending' },
+	});
 
-  const log = (m: string) => setLogs((prev) => [...prev, m]);
-  const set = (k: string, ok: boolean, detail?: string) => setResult((r) => ({ ...r, [k]: { ok, detail } }));
+	const [location, setLocation] = useState<Location.LocationObject | null>(null);
+	const [initialRegion, setInitialRegion] = useState<Region | null>(null);
+	const mapReadyTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const runDiagnostics = async () => {
-    setLogs([]);
-    setResult({});
+	useEffect(() => {
+		let canceled = false;
+		(async () => {
+			try {
+				const { status } = await Location.requestForegroundPermissionsAsync();
+				if (canceled) return;
+				if (status !== 'granted') {
+					setChecks((prev) => ({
+						...prev,
+						locationPermission: {
+							...prev.locationPermission,
+							status: 'fail',
+							detail: 'Permiso denegado. Otórgalo en ajustes.',
+						},
+						currentLocation: {
+							...prev.currentLocation,
+							status: 'fail',
+							detail: 'Sin permisos de ubicación',
+						},
+					}));
+					return;
+				}
+				setChecks((prev) => ({
+					...prev,
+					locationPermission: { ...prev.locationPermission, status: 'ok', detail: 'Concedido' },
+				}));
 
-    // 1) API key presence (ENV or app.json config)
-    const configKey = (Constants?.expoConfig as any)?.android?.config?.googleMaps?.apiKey
-      || (Constants?.expoConfig as any)?.ios?.config?.googleMapsApiKey
-      || '';
-    const envKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || process.env.GOOGLE_MAPS_API_KEY || configKey || '';
+				const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+				if (canceled) return;
+				setLocation(loc);
+				setChecks((prev) => ({
+					...prev,
+					currentLocation: {
+						...prev.currentLocation,
+						status: 'ok',
+						detail: `${loc.coords.latitude.toFixed(5)}, ${loc.coords.longitude.toFixed(5)}`,
+					},
+				}));
+				setInitialRegion({
+					latitude: loc.coords.latitude,
+					longitude: loc.coords.longitude,
+					latitudeDelta: 0.02,
+					longitudeDelta: 0.02,
+				});
+			} catch (e: any) {
+				if (canceled) return;
+				setChecks((prev) => ({
+					...prev,
+					locationPermission: { ...prev.locationPermission, status: 'fail', detail: 'Error pidiendo permisos' },
+					currentLocation: { ...prev.currentLocation, status: 'fail', detail: String(e?.message || e) },
+				}));
+			}
+		})();
+		return () => {
+			canceled = true;
+			if (mapReadyTimeout.current) clearTimeout(mapReadyTimeout.current);
+		};
+	}, []);
 
-    console.log("🚀 ~ runDiagnostics ~ envKey:", envKey)
+	// If the map doesn't report ready in time, fail the check
+	useEffect(() => {
+		if (checks.mapReady.status === 'pending') {
+			mapReadyTimeout.current = setTimeout(() => {
+				setChecks((prev) => ({
+					...prev,
+					mapReady: {
+						...prev.mapReady,
+						status: prev.mapReady.status === 'pending' ? 'fail' : prev.mapReady.status,
+						detail: prev.mapReady.status === 'pending' ? 'Tiempo excedido esperando al mapa' : prev.mapReady.detail,
+					},
+				}));
+			}, 8000);
+		}
+		return () => {
+			if (mapReadyTimeout.current) clearTimeout(mapReadyTimeout.current);
+		};
+	}, [checks.mapReady.status]);
 
+	const regionToUse = useMemo<Region>(() => {
+		return (
+			initialRegion || {
+				latitude: -34.6037,
+				longitude: -58.3816,
+				latitudeDelta: 0.05,
+				longitudeDelta: 0.05,
+			}
+		);
+	}, [initialRegion]);
 
+	const allOk =
+		checks.locationPermission.status === 'ok' &&
+		checks.currentLocation.status === 'ok' &&
+		checks.mapReady.status === 'ok';
 
-    if (envKey) {
-      set('apiKeyEnv', true, envKey === configKey ? 'Key desde app.json' : 'ENV KEY presente');
-    } else {
-      set('apiKeyEnv', false, 'Falta EXPO_PUBLIC_GOOGLE_MAPS_API_KEY/GOOGLE_MAPS_API_KEY o app.json');
-    }
+	return (
+		<SafeAreaView style={{ flex: 1 }}>
+			<ScrollView contentContainerStyle={styles.container}>
+				<Text style={styles.header}>Diagnóstico de Home / Mapa</Text>
+				<View style={styles.row}>
+					<Text style={styles.key}>Plataforma:</Text>
+					<Text style={styles.value}>{Platform.OS === 'ios' ? 'iOS' : 'Android'}</Text>
+				</View>
 
-    // 2) Location services + permissions
-    try {
-      const services = await Location.hasServicesEnabledAsync();
-      set('servicesEnabled', services, services ? 'Servicios de ubicación activos' : 'Servicios de ubicación desactivados');
-      log(`Servicios ubicación: ${services}`);
+				<View style={styles.card}>
+					<Text style={styles.cardTitle}>Checks</Text>
+					{Object.entries(checks).map(([key, c]) => (
+						<View key={key} style={styles.checkRow}>
+							<Text style={[styles.badge, c.status === 'ok' ? styles.badgeOk : c.status === 'fail' ? styles.badgeFail : styles.badgePending]}>
+								{c.status === 'ok' ? 'OK' : c.status === 'fail' ? 'FALLO' : '...'}
+							</Text>
+							<Text style={styles.checkLabel}>{c.label}</Text>
+							{!!c.detail && <Text style={styles.detail}>· {c.detail}</Text>}
+						</View>
+					))}
+				</View>
 
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      set('permission', status === 'granted', `Permiso: ${status}`);
-      log(`Permiso ubicación: ${status}`);
+				<View style={styles.card}>
+					<Text style={styles.cardTitle}>Mapa de prueba (directo)</Text>
+					<ErrorBoundary>
+						<View style={{ height: 220, borderRadius: 8, overflow: 'hidden' }}>
+							<MapView
+								provider={PROVIDER_GOOGLE}
+								style={{ flex: 1 }}
+								initialRegion={regionToUse}
+								onMapReady={() =>
+									setChecks((prev) => ({
+										...prev,
+										mapReady: { ...prev.mapReady, status: 'ok', detail: 'onMapReady recibido' },
+									}))
+								}
+							>
+								{location && (
+									<Marker
+										coordinate={{ latitude: location.coords.latitude, longitude: location.coords.longitude }}
+										title="Tu ubicación"
+									/>
+								)}
+							</MapView>
+						</View>
+					</ErrorBoundary>
+				</View>
 
-      if (status === 'granted') {
-        try {
-          const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
-          const coords = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
-          setCurrentLocation(coords);
-          set('getLocation', true, `${coords.latitude}, ${coords.longitude}`);
-          log(`Ubicación: ${coords.latitude}, ${coords.longitude}`);
-        } catch (e: any) {
-          set('getLocation', false, e?.message || String(e));
-          log(`Error getLocation: ${e?.message || String(e)}`);
-        }
-      }
-    } catch (e: any) {
-      set('permission', false, e?.message || String(e));
-    }
+				<View style={styles.card}>
+					<Text style={styles.cardTitle}>Mapa como en Home</Text>
+					<View style={{ height: 220, borderRadius: 8, overflow: 'hidden' }}>
+						<PrincipalMap
+							height={220}
+							initialRegion={regionToUse}
+							markers={
+								location
+									? [
+											{
+												latitude: location.coords.latitude,
+												longitude: location.coords.longitude,
+												title: 'Aquí',
+												description: 'Ubicación actual',
+											},
+										]
+									: undefined
+							}
+						/>
+					</View>
+				</View>
 
-    // 3) Directions API test (simple HEAD/GET)
-    if (envKey) {
-      try {
-        const origin = currentLocation || { latitude: 4.7110, longitude: -74.0721 };
-        const dest = { latitude: 4.65, longitude: -74.1 };
-        console.log("🚀 ~ runDiagnostics ~ envKey: 2 ", envKey)
-        const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${origin.latitude},${origin.longitude}&destination=${dest.latitude},${dest.longitude}&key=${envKey}`;
-        console.log("🚀 ~ runDiagnostics ~ url:", url)
-        const res = await fetch(url);
-        console.log("🚀 ~ runDiagnostics ~ res:", res)
-        const json = await res.json();
-        const ok = json?.status === 'OK' || json?.routes?.length >= 0; // En algunos entornos devuelve ZERO_RESULTS
-        set('directions', !!ok, `status=${json?.status}`);
-      } catch (e: any) {
-        set('directions', false, e?.message || String(e));
-      }
-    }
-
-    // 4) Map render test: center on location/default
-    setTimeout(() => {
-      if (mapRef.current) {
-        const target = currentLocation || { latitude: 4.7110, longitude: -74.0721 };
-        mapRef.current.animateToRegion({
-          ...target,
-          latitudeDelta: 0.02,
-          longitudeDelta: 0.02,
-        }, 600);
-        set('mapRender', true, 'MapView render llamado');
-      }
-    }, 300);
-  };
-
-  useEffect(() => {
-    runDiagnostics();
-  }, []);
-
-  const Item = ({ label, ok, detail }: { label: string; ok: boolean; detail?: string }) => (
-    <View style={styles.item}>
-      <MaterialIcons name={ok ? 'check-circle' : 'error'} size={20} color={ok ? '#10b981' : '#ef4444'} />
-      <Text style={styles.itemLabel}>{label}</Text>
-      <Text style={[styles.itemDetail, { color: ok ? '#6b7280' : '#ef4444' }]}>{detail || ''}</Text>
-    </View>
-  );
-
-  return (
-    <SafeAreaView style={styles.safe}>
-      <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.title}>Pruebas / Diagnóstico</Text>
-        <Text style={styles.subtitle}>Plataforma: {Platform.OS}</Text>
-
-        <View style={styles.card}>
-          <Item label="API Key (ENV)" ok={!!result.apiKeyEnv?.ok} detail={result.apiKeyEnv?.detail} />
-          <Item label="Servicios de Ubicación" ok={!!result.servicesEnabled?.ok} detail={result.servicesEnabled?.detail} />
-          <Item label="Permiso de Ubicación" ok={!!result.permission?.ok} detail={result.permission?.detail} />
-          <Item label="Obtener Ubicación" ok={!!result.getLocation?.ok} detail={result.getLocation?.detail} />
-          <Item label="Directions API" ok={!!result.directions?.ok} detail={result.directions?.detail} />
-          <Item label="Render de Mapa" ok={!!result.mapRender?.ok} detail={result.mapRender?.detail} />
-        </View>
-
-        <View style={styles.mapWrap}>
-          <MapView
-            ref={mapRef}
-            provider={PROVIDER_GOOGLE}
-            style={{ width: '100%', height: 260 }}
-            initialRegion={{
-              latitude: currentLocation?.latitude ?? 4.7110,
-              longitude: currentLocation?.longitude ?? -74.0721,
-              latitudeDelta: 0.05,
-              longitudeDelta: 0.05,
-            }}
-            loadingEnabled
-            loadingIndicatorColor="#3b82f6"
-          >
-            {currentLocation && (
-              <Marker coordinate={currentLocation} title="Tu ubicación" />
-            )}
-          </MapView>
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.logsTitle}>Logs</Text>
-          {logs.map((l, i) => (
-            <Text key={i} style={styles.logLine}>• {l}</Text>
-          ))}
-        </View>
-
-        <TouchableOpacity style={styles.button} onPress={runDiagnostics}>
-          <MaterialIcons name="refresh" size={20} color="#fff" />
-          <Text style={styles.buttonText}>Re-ejecutar pruebas</Text>
-        </TouchableOpacity>
-      </ScrollView>
-    </SafeAreaView>
-  );
+				<View style={[styles.card, { marginBottom: 24 }]}>
+					<Text style={styles.cardTitle}>Resultado</Text>
+					{allOk ? (
+						<Text style={styles.ok}>Todo listo: el mapa debería prender en Home.</Text>
+					) : (
+						<Text style={styles.warn}>Faltan checks en verde para garantizar el mapa.</Text>
+					)}
+				</View>
+			</ScrollView>
+		</SafeAreaView>
+	);
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#fff' },
-  container: { padding: 16 },
-  title: { fontSize: 20, fontWeight: '600', color: '#111827', marginBottom: 6 },
-  subtitle: { color: '#6b7280', marginBottom: 12 },
-  card: { backgroundColor: '#f9fafb', borderRadius: 10, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: '#e5e7eb' },
-  item: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-  itemLabel: { marginLeft: 8, fontWeight: '500', color: '#111827', flex: 0 },
-  itemDetail: { marginLeft: 8, flex: 1 },
-  mapWrap: { borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10, overflow: 'hidden', marginBottom: 12 },
-  logsTitle: { fontWeight: '600', color: '#111827', marginBottom: 8 },
-  logLine: { color: '#374151', marginBottom: 4 },
-  button: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#3b82f6', padding: 12, borderRadius: 8 },
-  buttonText: { color: '#fff', marginLeft: 8, fontWeight: '600' },
+	container: {
+		padding: 16,
+		gap: 12,
+	},
+	header: {
+		fontSize: 20,
+		fontWeight: '700',
+		marginBottom: 4,
+	},
+	row: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		gap: 8,
+	},
+	key: {
+		fontWeight: '600',
+	},
+	value: {
+		color: '#333',
+	},
+	card: {
+		backgroundColor: '#fff',
+		borderRadius: 12,
+		padding: 12,
+		shadowColor: '#000',
+		shadowOpacity: 0.08,
+		shadowRadius: 8,
+		shadowOffset: { width: 0, height: 2 },
+		elevation: 2,
+	},
+	cardError: {
+		backgroundColor: '#fff5f5',
+		borderRadius: 12,
+		padding: 12,
+		borderColor: '#ffb3b3',
+		borderWidth: 1,
+	},
+	cardTitle: {
+		fontWeight: '700',
+		marginBottom: 8,
+	},
+	checkRow: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		flexWrap: 'wrap',
+		gap: 8,
+		marginVertical: 4,
+	},
+	badge: {
+		paddingHorizontal: 8,
+		paddingVertical: 2,
+		borderRadius: 8,
+		overflow: 'hidden',
+		fontWeight: '700',
+		color: 'white',
+		minWidth: 44,
+		textAlign: 'center',
+	},
+	badgeOk: { backgroundColor: '#16a34a' },
+	badgeFail: { backgroundColor: '#dc2626' },
+	badgePending: { backgroundColor: '#2563eb' },
+	checkLabel: {
+		fontWeight: '600',
+	},
+	detail: {
+		color: '#555',
+	},
+	ok: { color: '#166534', fontWeight: '600' },
+	warn: { color: '#854d0e', fontWeight: '600' },
+	fail: { color: '#991b1b', fontWeight: '600' },
+	small: { color: '#555', fontSize: 12, marginTop: 4 },
 });
+
