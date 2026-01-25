@@ -16,7 +16,7 @@ export default function HomeScreen() {
           Bienvenido, {user?.user_metadata?.nombre || 'Usuario'}
         </Text>
       </View>
-      <PrincipalMap height={300} />
+      <PrincipalMap/>
       <ButtonActionHome/>
       <ButtonProfile/>
     </SafeAreaView>
