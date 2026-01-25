@@ -191,3 +191,41 @@ export function addNotificationResponseReceivedListener(
 ) {
   return Notifications.addNotificationResponseReceivedListener(callback);
 }
+
+/**
+ * Enviar una notificación local inmediata al dispositivo actual
+ * Requiere permisos de notificaciones concedidos
+ */
+export async function sendLocalNotification(
+  title: string,
+  body: string,
+  data?: any
+) {
+  try {
+    // Verificar permisos; si no están otorgados, solicitarlos
+    const { status } = await Notifications.getPermissionsAsync();
+    if (status !== 'granted') {
+      const req = await Notifications.requestPermissionsAsync();
+      if (req.status !== 'granted') {
+        console.log('❌ Permisos de notificaciones no concedidos para notificación local');
+        return { success: false, message: 'Permisos no concedidos' };
+      }
+    }
+
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title,
+        body,
+        data: data || {},
+        sound: 'default',
+      },
+      // trigger null => enviar inmediatamente
+      trigger: null,
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error('❌ Error enviando notificación local:', error);
+    return { success: false, error };
+  }
+}
