@@ -1,7 +1,14 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Image, TextInput } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../../navigation/AppNavigator';
 import { styles } from './ServicesScreen.styles';
+import * as Location from 'expo-location';
+import { Alert } from 'react-native';
+import { createServiceRequest } from '../../services/supabaseService';
+import { sendPushToMechanics } from '../../services/notificationService';
 
 type ServiceItem = {
 	type: string;
@@ -12,6 +19,7 @@ type ServiceItem = {
 };
 
 export default function ServicesScreen() {
+	const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 	const services: ServiceItem[] = useMemo(
 		() => [
 			{
@@ -68,6 +76,39 @@ export default function ServicesScreen() {
 
 	const [selectedService, setSelectedService] = useState<ServiceItem | null>(null);
 	const [notes, setNotes] = useState('');
+	const [currentLocation, setCurrentLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+	const [submitting, setSubmitting] = useState(false);
+
+		// Obtener ubicación al montar
+		useEffect(() => {
+			let mounted = true;
+			(async () => {
+				try {
+					const { status } = await Location.requestForegroundPermissionsAsync();
+					if (status === 'granted') {
+						try {
+							const location = await Location.getCurrentPositionAsync({
+								accuracy: Location.Accuracy.High,
+							});
+							if (!mounted) return;
+							setCurrentLocation({
+								latitude: location.coords.latitude || 4.711,
+								longitude: location.coords.longitude || -74.0721,
+							});
+						} catch (err) {
+							// Fallback a Bogotá
+							if (!mounted) return;
+							setCurrentLocation({ latitude: 4.711, longitude: -74.0721 });
+						}
+					} else {
+						setCurrentLocation({ latitude: 4.711, longitude: -74.0721 });
+					}
+				} catch (e) {
+					setCurrentLocation({ latitude: 4.711, longitude: -74.0721 });
+				}
+			})();
+			return () => { mounted = false; };
+		}, []);
 
 	const handleSelect = (service: ServiceItem) => {
 		setSelectedService(service);
@@ -79,21 +120,63 @@ export default function ServicesScreen() {
 	};
 
 	const handleSubmit = () => {
-		// TODO: Integrar con flujo de creación de solicitud
-		console.log('Servicio seleccionado:', selectedService);
-		console.log('Notas:', notes);
-		// Por ahora, regresamos al listado
-		handleBackToList();
+		(async () => {
+			if (!selectedService) return;
+			// Fallback a ubicación por defecto si no hay ubicación actual
+			const usingDefaultLocation = !currentLocation;
+			const coords = currentLocation ?? { latitude: 4.711, longitude: -74.0721 };
+
+			if (usingDefaultLocation) {
+				Alert.alert('Ubicación por defecto', 'No se pudo obtener tu ubicación; usaremos Bogotá como referencia.');
+			}
+
+			try {
+				setSubmitting(true);
+				const description = notes || selectedService.desc;
+				const { data, error } = await createServiceRequest({
+					service_name: selectedService.type,
+					service_description: description,
+					service_type: 'emergency',
+					latitude: coords.latitude,
+					longitude: coords.longitude,
+				});
+
+				if (error || !data) {
+					Alert.alert('Error', 'No se pudo crear la solicitud');
+					setSubmitting(false);
+					return;
+				}
+
+				await sendPushToMechanics(
+					'🚨 Nueva Solicitud de Servicio',
+					`Servicio: ${selectedService.type}${description ? ' - ' + description : ''}`,
+					{ serviceId: data.id, type: selectedService.type }
+				);
+
+				Alert.alert('¡Solicitud Creada!', 'Un mecánico cercano será notificado', [
+					{ text: 'OK', onPress: () => {
+						handleBackToList();
+						navigation.goBack();
+					}}
+				]);
+			} catch (e) {
+				console.error('Error creando servicio desde ServicesScreen:', e);
+				Alert.alert('Error', 'Ocurrió un error al crear la solicitud');
+			} finally {
+				setSubmitting(false);
+			}
+		})();
 	};
 
 	if (selectedService) {
 		return (
 			<View style={styles.container}>
 				<View style={styles.modalHeader}>
-					<Text style={styles.modalTitle}>{selectedService.type}</Text>
 					<TouchableOpacity onPress={handleBackToList}>
-						<MaterialIcons name="close" size={24} color="#6b7280" />
+						<MaterialIcons name="arrow-back" size={24} color="#6b7280" />
 					</TouchableOpacity>
+					<Text style={styles.modalTitle}>{selectedService.type}</Text>
+					<View style={styles.headerRight} />
 				</View>
 
 				<ScrollView style={styles.detailScroll} contentContainerStyle={styles.detailContent}>
@@ -129,6 +212,9 @@ export default function ServicesScreen() {
 	return (
 		<View style={styles.container}>
 			<View style={styles.modalHeader}>
+				<TouchableOpacity onPress={() => navigation.goBack()}>
+					<MaterialIcons name="arrow-back" size={24} color="#6b7280" />
+				</TouchableOpacity>
 				<Text style={styles.modalTitle}>¿Qué servicio necesitas?</Text>
 				<View style={styles.headerRight} />
 			</View>

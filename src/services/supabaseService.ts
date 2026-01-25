@@ -297,7 +297,6 @@ export const createServiceRequest = async (serviceData: {
   service_name: string;
   service_description: string;
   service_type: 'emergency' | 'detail';
-  service_icon?: string;
   latitude?: number;
   longitude?: number;
 }) => {
@@ -317,7 +316,6 @@ export const createServiceRequest = async (serviceData: {
         service_name: serviceData.service_name,
         service_description: serviceData.service_description,
         service_type: serviceData.service_type,
-        service_icon: serviceData.service_icon,
         latitude: serviceData.latitude,
         longitude: serviceData.longitude,
         status: 'pending',
