@@ -126,9 +126,6 @@ export default function ServicesScreen() {
 			const usingDefaultLocation = !currentLocation;
 			const coords = currentLocation ?? { latitude: 4.711, longitude: -74.0721 };
 
-			if (usingDefaultLocation) {
-				Alert.alert('Ubicación por defecto', 'No se pudo obtener tu ubicación; usaremos Bogotá como referencia.');
-			}
 
 			try {
 				setSubmitting(true);
