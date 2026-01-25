@@ -13,7 +13,7 @@ import { createServiceRequest } from '../services/supabaseService';
 import { sendPushToMechanics } from '../services/notificationService';
 import { startMechanicTracking, stopMechanicTracking, subscribeMechanicLocation, updateServiceStatus } from '../services/trackingService';
 import { RootStackParamList } from '../navigation/AppNavigator';
-import { styles } from './HomeScreen.styles';
+import { styles } from './homeScreen/HomeScreen.styles';
 
 type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 type HomeScreenRouteProp = RouteProp<RootStackParamList, 'Home'>;

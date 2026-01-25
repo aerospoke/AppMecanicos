@@ -11,13 +11,10 @@ type ButtonActionHomeProps = {
   title: string;
 };
 
-type HomeScreenNavigationProp = NativeStackNavigationProp<
-  RootStackParamList,
-  'Home'
->;
+type AppNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 export default function ButtonActionHome() {
-  const navigation = useNavigation<HomeScreenNavigationProp>();
+  const navigation = useNavigation<AppNavigationProp>();
   const { userRole } = useAuth();
 
   const title = userRole === 'mecanico' ? 'Dashboard' : 'Solicitar servicio';
@@ -26,7 +23,8 @@ export default function ButtonActionHome() {
     if (userRole == 'mecanico') {
       navigation.navigate('MechanicDashboard');
     } else {
-      navigation.navigate('Profile');
+      // Para clientes, ir a la pantalla de servicios
+      navigation.navigate('Services');
     }
   };
 

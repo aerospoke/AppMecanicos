@@ -1,10 +1,10 @@
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../../context/AuthContext';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { View, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import ButtonActionHome from '../components/buttonActionHome/buttonActionHome';
-import ButtonProfile from '../components/buttonProfile/buttonProfile';
-import PrincipalMap from '../components/principalMap/principalMap';
+import ButtonActionHome from '../../components/buttonActionHome/buttonActionHome';
+import ButtonProfile from '../../components/buttonProfile/buttonProfile';
+import PrincipalMap from '../../components/principalMap/principalMap';
 
 export default function HomeScreen() {
   const { userRole, user } = useAuth();
