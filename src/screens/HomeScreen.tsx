@@ -1,23 +1,22 @@
 import { useAuth } from '../context/AuthContext';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
-import { View, Text, SafeAreaView } from 'react-native';
+import { View, Text } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import ButtonActionHome from '../components/buttonActionHome/buttonActionHome';
 import ButtonProfile from '../components/buttonProfile/buttonProfile';
-
-
-
+import PrincipalMap from '../components/principalMap/principalMap';
 
 export default function HomeScreen() {
   const { userRole, user } = useAuth();
-  console.log("🚀 ~ HomeScreen ~ userRole:", userRole)
-  console.log("🚀 ~ HomeScreen ~ user:", user)
-
-
   return (
-    <SafeAreaView style={{ flex: 1 }}>
+    <SafeAreaView style={{ flex: 1, paddingBottom: 16 }}>
+
       <View style={{ padding: 16 }}>
-        <Text>hola</Text>
+        <Text style={{ fontSize: 24, fontWeight: 'bold', marginBottom: 8 }}>
+          Bienvenido, {user?.user_metadata?.nombre || 'Usuario'}
+        </Text>
       </View>
+      <PrincipalMap height={300} />
       <ButtonActionHome/>
       <ButtonProfile/>
     </SafeAreaView>

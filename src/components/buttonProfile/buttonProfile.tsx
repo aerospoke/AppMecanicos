@@ -20,11 +20,7 @@ export default function ButtonProfile() {
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const { userRole,user } = useAuth();
 
-  console.log("🚀 ~ ButtonProfile ~ user:", user)
-
-
   const initialName = user?.user_metadata?.nombre.slice(0, 1).toUpperCase() || 'U';
-  console.log("🚀 ~ ButtonProfile ~ initialName:", initialName)
 
   const handlePress = () => {
       navigation.navigate('Profile');
