@@ -1,9 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, ScrollView, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
 import MapView, { Marker, PROVIDER_GOOGLE, Region } from 'react-native-maps';
 import PrincipalMap from '../components/principalMap/principalMap';
+import { registerForPushNotificationsAsync, sendPushToAll } from '../services/notificationService';
+import { supabase } from '../config/supabase';
+import { useAuth } from '../context/AuthContext';
 
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean; error?: any }> {
 	constructor(props: { children: React.ReactNode }) {
@@ -34,6 +37,11 @@ type Check = {
 };
 
 export default function PruebasScreen() {
+	const { user } = useAuth();
+	const [pushToken, setPushToken] = useState<string | null>(null);
+	const [dbToken, setDbToken] = useState<string | null>(null);
+	const [tokenStatus, setTokenStatus] = useState<string>('Pendiente');
+	const [sendAllStatus, setSendAllStatus] = useState<string>('—');
 	const [checks, setChecks] = useState<Record<string, Check>>({
 		locationPermission: { label: 'Permiso de ubicación', status: 'pending' },
 		currentLocation: { label: 'Ubicación actual obtenida', status: 'pending' },
@@ -102,6 +110,67 @@ export default function PruebasScreen() {
 			if (mapReadyTimeout.current) clearTimeout(mapReadyTimeout.current);
 		};
 	}, []);
+
+	const loadDbToken = async () => {
+		if (!user?.id) return;
+		try {
+			const { data, error } = await supabase
+				.from('profiles')
+				.select('push_token')
+				.eq('id', user.id)
+				.single();
+			if (error) {
+				setTokenStatus('Error leyendo BD: ' + error.message);
+			} else {
+				setDbToken(data?.push_token || null);
+				setTokenStatus(data?.push_token ? 'Token en BD' : 'Sin token en BD');
+			}
+		} catch (e: any) {
+			setTokenStatus('Excepción BD: ' + (e?.message || String(e)));
+		}
+	};
+
+	const obtainToken = async () => {
+		setTokenStatus('Solicitando permisos y token...');
+		const token = await registerForPushNotificationsAsync();
+		if (token) {
+			setPushToken(token);
+			setTokenStatus('Token obtenido');
+		} else {
+			setTokenStatus('No se obtuvo token');
+		}
+	};
+
+	const saveTokenToDb = async () => {
+		if (!user?.id || !pushToken) {
+			setTokenStatus('Falta user o token');
+			return;
+		}
+		const { error } = await supabase
+			.from('profiles')
+			.update({ push_token: pushToken })
+			.eq('id', user.id);
+		if (error) {
+			setTokenStatus('Error guardando en BD: ' + error.message);
+		} else {
+			setTokenStatus('Token guardado en BD');
+			await loadDbToken();
+		}
+	};
+
+	const sendPushAll = async () => {
+		setSendAllStatus('Enviando...');
+		const res = await sendPushToAll(
+			'🔔 Prueba: push para todos',
+			'Mensaje de prueba enviado a todos los tokens registrados',
+			{ screen: 'Pruebas', type: 'broadcast-test' }
+		);
+		if ((res as any)?.success) {
+			setSendAllStatus('✅ Enviado');
+		} else {
+			setSendAllStatus('❌ Falló');
+		}
+	};
 
 	// If the map doesn't report ready in time, fail the check
 	useEffect(() => {
@@ -216,6 +285,40 @@ export default function PruebasScreen() {
 						<Text style={styles.warn}>Faltan checks en verde para garantizar el mapa.</Text>
 					)}
 				</View>
+
+				<View style={[styles.card, { marginBottom: 24 }]}>
+					<Text style={styles.cardTitle}>Pruebas de Push Token</Text>
+					<View style={styles.row}>
+						<Text style={styles.key}>Estado:</Text>
+						<Text style={styles.value}>{tokenStatus}</Text>
+					</View>
+					<View style={styles.row}>
+						<Text style={styles.key}>Token (local):</Text>
+						<Text style={styles.small}>{pushToken ? pushToken.substring(0, 48) + '...' : '—'}</Text>
+					</View>
+					<View style={styles.row}>
+						<Text style={styles.key}>Token en BD:</Text>
+						<Text style={styles.small}>{dbToken ? dbToken.substring(0, 48) + '...' : '—'}</Text>
+					</View>
+					<View style={{ flexDirection: 'row', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+						<TouchableOpacity style={styles.btn} onPress={obtainToken}>
+							<Text style={styles.btnText}>Obtener Token</Text>
+						</TouchableOpacity>
+						<TouchableOpacity style={styles.btn} onPress={saveTokenToDb}>
+							<Text style={styles.btnText}>Guardar en BD</Text>
+						</TouchableOpacity>
+						<TouchableOpacity style={styles.btn} onPress={loadDbToken}>
+							<Text style={styles.btnText}>Refrescar BD</Text>
+						</TouchableOpacity>
+						<TouchableOpacity style={styles.btnSecondary} onPress={sendPushAll}>
+							<Text style={styles.btnText}>Enviar a Todos</Text>
+						</TouchableOpacity>
+					</View>
+					<View style={[styles.row, { marginTop: 8 }]}>
+						<Text style={styles.key}>Broadcast:</Text>
+						<Text style={styles.value}>{sendAllStatus}</Text>
+					</View>
+				</View>
 			</ScrollView>
 		</SafeAreaView>
 	);
@@ -293,5 +396,18 @@ const styles = StyleSheet.create({
 	warn: { color: '#854d0e', fontWeight: '600' },
 	fail: { color: '#991b1b', fontWeight: '600' },
 	small: { color: '#555', fontSize: 12, marginTop: 4 },
+	btn: {
+		backgroundColor: '#2563eb',
+		paddingHorizontal: 12,
+		paddingVertical: 8,
+		borderRadius: 8,
+	},
+	btnText: { color: '#fff', fontWeight: '700' },
+	btnSecondary: {
+		backgroundColor: '#059669',
+		paddingHorizontal: 12,
+		paddingVertical: 8,
+		borderRadius: 8,
+	},
 });
 
