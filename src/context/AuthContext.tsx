@@ -50,7 +50,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUserRole(data.rol as 'usuario' | 'mecanico' | 'admin');
         
         // Registrar token de notificaciones de forma asíncrona (sin await)
-        console.log('📱 Registrando push token para:', data.rol);
+        // console.log('📱 Registrando push token para:', data.rol);
         // registerPushToken(userId).catch(error => 
         //   console.log('❌ Error en registro asíncrono de token:', error)
         // );

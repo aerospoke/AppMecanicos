@@ -319,6 +319,15 @@ export default function ProfileScreen() {
           <Text style={styles.actionButtonText}>Ayuda</Text>
           <MaterialIcons name="chevron-right" size={20} color="#9ca3af" />
         </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={styles.actionButton}
+          onPress={() => navigation.navigate('Pruebas')}
+        >
+          <MaterialIcons name="science" size={20} color="#3b82f6" />
+          <Text style={styles.actionButtonText}>Pruebas (Diagnóstico)</Text>
+          <MaterialIcons name="chevron-right" size={20} color="#9ca3af" />
+        </TouchableOpacity>
       </View>
 
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
