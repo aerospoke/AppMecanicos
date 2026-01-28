@@ -7,7 +7,8 @@ import { RootStackParamList } from '../../navigation/AppNavigator';
 import { styles } from './ServicesScreen.styles';
 import * as Location from 'expo-location';
 import { Alert } from 'react-native';
-import { createServiceRequest } from '../../services/supabaseService';
+import { createServiceRequest, getAll } from '../../services/supabaseService';
+import resolveServiceImage from '../../utils/serviceImage';
 import { sendPushToMechanics } from '../../services/notificationService';
 
 type ServiceItem = {
@@ -20,59 +21,10 @@ type ServiceItem = {
 
 export default function ServicesScreen() {
 	const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-	const services: ServiceItem[] = useMemo(
-		() => [
-			{
-				type: 'Cambio de Llanta',
-				icon: 'build',
-				desc: 'Cambio o reparación de llantas',
-				desc2:
-					"¿Tu llanta decidió 'tomar una siesta' en medio del camino? A veces el asfalto muerde, pero no te preocupes, nosotros traemos la curita (y el gato hidráulico).",
-				image: require('../../../assets/wheel-flat.png'),
-			},
-			{
-				type: 'Batería Descargada',
-				icon: 'battery-alert',
-				desc: 'Auxilio con batería',
-				desc2:
-					"¿Tu batería se declaró en huelga de brazos caídos? Dale, que todos tenemos días de 'baja energía'. Nosotros llegamos con los cables mágicos para revivirla como en las películas. ¡Frankenstein estaría orgulloso!",
-				image: require('../../../assets/electric-damage.png'),
-			},
-			{
-				type: 'Falta de Gasolina',
-				icon: 'local-gas-station',
-				desc: 'Servicio de gasolina',
-				desc2:
-					'¿El tanque decidió hacer dieta sin avisarte? Tranquilo, hasta los mejores olvidan parar en la gasolinera. Te llevamos combustible para que tu auto deje de hacerse el dramático.',
-				image: require('../../../assets/without-gasoline.png'),
-			},
-			{
-				type: 'Remolque',
-				icon: 'local-shipping',
-				desc: 'Servicio de grúa',
-				desc2:
-					"¿Tu auto dijo 'hoy no me levanto de la cama'? A veces necesitan un taxi VIP. Nuestra grúa lo llevará con todo el glamour que merece, como una estrella de cine en su limusina.",
-				image: require('../../../assets/grua.png'),
-			},
-			{
-				type: 'Revisión General',
-				icon: 'search',
-				desc: 'Diagnóstico del vehículo',
-				desc2:
-					'¿Tu auto suena como orquesta desafinada? Ruidos, vibraciones, lucecitas misteriosas... Somos los detectives de motores. CSI Automotriz a tu servicio.',
-				image: require('../../../assets/engine-dmaged.png'),
-			},
-			{
-				type: 'Otro',
-				icon: 'help-outline',
-				desc: 'Otro tipo de servicio',
-				desc2:
-					'¿Tu problema es tan único que ni Google lo entiende? ¡Nos encantan los retos! Cuéntanos qué locura le pasó a tu auto y lo resolveremos juntos. Nada nos asusta... bueno, casi nada.',
-				image: require('../../../assets/not-idea-error.png'),
-			},
-		],
-		[]
-	);
+	// Lista por defecto (fallback) si falla la carga desde Supabase
+	const defaultServices: ServiceItem[] = [];
+
+	const [services, setServices] = useState<ServiceItem[]>(defaultServices);
 
 	const [selectedService, setSelectedService] = useState<ServiceItem | null>(null);
 	const [notes, setNotes] = useState('');
@@ -109,6 +61,36 @@ export default function ServicesScreen() {
 			})();
 			return () => { mounted = false; };
 		}, []);
+
+	// Cargar catálogo de servicios desde Supabase
+	useEffect(() => {
+		let mounted = true;
+		(async () => {
+			try {
+				const { data, error } = await getAll<any>('services_catalog');
+				if (error || !data) throw error || new Error('No data');
+
+				const active = data.filter((row: any) => row.is_active !== false);
+				const sorted = active.sort((a: any, b: any) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+				const mapped: ServiceItem[] = sorted.map((row: any) => ({
+					type: row.type,
+					icon: row.icon as React.ComponentProps<typeof MaterialIcons>['name'],
+					desc: row.desc || '',
+					desc2: row.desc2 || '',
+					image: resolveServiceImage(row.image_key, row.image_url),
+				}));
+
+				if (mounted && mapped.length > 0) {
+					setServices(mapped);
+				}
+			} catch (e) {
+				// Mantener fallback por defecto
+				console.warn('Fallo al cargar services_catalog, usando fallback local');
+				if (mounted) setServices(defaultServices);
+			}
+		})();
+		return () => { mounted = false; };
+	}, []);
 
 	const handleSelect = (service: ServiceItem) => {
 		setSelectedService(service);
@@ -177,7 +159,9 @@ export default function ServicesScreen() {
 				</View>
 
 				<ScrollView style={styles.detailScroll} contentContainerStyle={styles.detailContent}>
-					<Image source={selectedService.image} style={styles.detailImage} resizeMode="contain" />
+					{selectedService.image && (
+						<Image source={selectedService.image} style={styles.detailImage} resizeMode="contain" />
+					)}
 					<View style={styles.detailTextBlock}>
 						<Text style={styles.serviceName}>{selectedService.type}</Text>
 						<Text style={styles.serviceDesc}>{selectedService.desc}</Text>
