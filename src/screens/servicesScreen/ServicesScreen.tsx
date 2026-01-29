@@ -8,7 +8,7 @@ import { styles } from './ServicesScreen.styles';
 import * as Location from 'expo-location';
 import { Alert } from 'react-native';
 import { createServiceRequest, getAll } from '../../services/supabaseService';
-import resolveServiceImage from '../../utils/serviceImage';
+import { resolveServiceImage } from '../../utils/serviceImage';
 import { sendPushToMechanics } from '../../services/notificationService';
 
 type ServiceItem = {
@@ -77,7 +77,8 @@ export default function ServicesScreen() {
 					icon: row.icon as React.ComponentProps<typeof MaterialIcons>['name'],
 					desc: row.desc || '',
 					desc2: row.desc2 || '',
-					image: resolveServiceImage(row.image_key, row.image_url),
+					image: resolveServiceImage(row.image_key),
+					
 				}));
 
 				if (mounted && mapped.length > 0) {
