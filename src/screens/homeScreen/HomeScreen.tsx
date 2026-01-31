@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import ButtonActionHome from '../../components/buttonActionHome/buttonActionHome';
 import ButtonProfile from '../../components/buttonProfile/buttonProfile';
 import PrincipalMap from '../../components/principalMap/principalMap';
+import ModalStateService from '../../components/modalStateService/modalStateService';
 
 export default function HomeScreen() {
   const { userRole, user } = useAuth();
@@ -19,6 +20,7 @@ export default function HomeScreen() {
       <PrincipalMap/>
       <ButtonActionHome/>
       <ButtonProfile/>
+      <ModalStateService/>
     </SafeAreaView>
   )
 }    
