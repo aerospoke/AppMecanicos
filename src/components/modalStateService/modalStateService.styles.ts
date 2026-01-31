@@ -3,7 +3,6 @@ import { StyleSheet } from 'react-native';
 const styles = StyleSheet.create({
   container: {
     width: '100%',
-    minHeight: 400,
     borderRadius: 22.5,
     backgroundColor: '#ffffff',
     padding: 20,
@@ -61,15 +60,22 @@ const styles = StyleSheet.create({
   stepLineInactive: {
     backgroundColor: '#e5e7eb',
   },
+  stepIcon: {
+    marginRight: 20,
+  },
   stepContent: {
-    alignItems: 'center',
-    marginBottom: 40,
+    marginHorizontal: 35,
+    display: 'flex',
+    flexDirection: 'row',
+  },
+  stepDescriptionContainer: {
+    marginBottom: 30,
   },
   stepTitle: {
     fontSize: 20,
     fontWeight: '600',
     color: '#1f2937',
-    marginTop: 16,
+    marginTop: 2,
     marginBottom: 8,
   },
   stepDescription: {

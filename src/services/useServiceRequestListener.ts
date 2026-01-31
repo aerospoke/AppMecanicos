@@ -15,6 +15,7 @@ export function useServiceRequestListener() {
         .from('service_requests')
         .select('*')
         .eq('user_id', user.id)
+        .in('status', ['pending', 'accepted', 'in_progress']) // Puedes ajustar el filtro según tus necesidades
         .order('created_at', { ascending: false })
         .limit(1)
         .single();

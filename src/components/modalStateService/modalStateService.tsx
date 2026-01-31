@@ -13,8 +13,7 @@ const statusToStep = (status: string | undefined): number => {
             return 3;
         case "completed":
             return 4;
-        case "completed":
-            return 5;
+       
         default:
             return 1;
     }
@@ -31,11 +30,10 @@ export default function ModalStateService({ visible, status, onClose }: ModalSta
     const currentStep = statusToStep(status);
 
     const steps = [
-        { id: 1, title: "Solicitud Creada", description: "Tu solicitud ha sido enviada, estamos notificando a los mecánicos cercanos", icon: "check-circle" as const },
+        { id: 1, title: "Solicitud Creada", description: "Notificando a mecánicos cercanos", icon: "check-circle" as const },
         { id: 2, title: "Mecánico Asignado", description: "Un mecánico ha aceptado tu servicio", icon: "search" as const },
-        { id: 3, title: "En Progreso", description: "El mecánico ha notificado que está trabajando en el problema", icon: "person" as const },
-        { id: 4, title: "En Camino", description: "El mecánico se dirige hacia tu ubicación", icon: "directions-car" as const },
-        { id: 5, title: "Completado", description: "El servicio ha sido completado", icon: "check-circle" as const },
+        { id: 3, title: "En Progreso", description: "El mecánico trabaja en el caso", icon: "person" as const },
+        { id: 4, title: "Completado", description: "El servicio ha sido completado", icon: "check-circle" as const },
     ];
 
     const currentStepData = steps.find(step => step.id === currentStep);
@@ -45,7 +43,8 @@ export default function ModalStateService({ visible, status, onClose }: ModalSta
             visible={visible}
             animationType="slide"
             transparent
-            onRequestClose={onClose}
+            // Evita que el botón de volver cierre el modal
+            onRequestClose={() => {}}
         >
             <View style={styles.container}>
                 <View style={styles.header}>
@@ -80,20 +79,26 @@ export default function ModalStateService({ visible, status, onClose }: ModalSta
                 {/* Contenido del Paso Actual */}
                 <View style={styles.stepContent}>
                     <MaterialIcons
+                     style={styles.stepIcon}
                         name={currentStepData?.icon}
                         size={64}
                         color={currentStep <= currentStep ? "#306bd3" : "#9ca3af"}
                     />
-                    <Text style={styles.stepTitle}>{currentStepData?.title}</Text>
-                    <Text style={styles.stepDescription}>{currentStepData?.description}</Text>
+                    <View style={styles.stepDescriptionContainer}>
+                        <Text style={styles.stepTitle}>{currentStepData?.title}</Text>
+                        <Text style={styles.stepDescription}>{currentStepData?.description}</Text>
+                    </View>
                 </View>
+                 {/* Botón de cerrar */}
 
-                {/* Botón de cerrar */}
+
+                {currentStepData.id === 4 &&
                 <View style={styles.buttonContainer}>
                     <TouchableOpacity style={styles.button} onPress={onClose}>
                         <Text style={styles.buttonText}>Cerrar</Text>
                     </TouchableOpacity>
                 </View>
+                 }
             </View>
         </Modal>
     );

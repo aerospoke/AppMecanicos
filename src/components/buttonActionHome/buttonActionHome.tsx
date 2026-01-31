@@ -8,25 +8,27 @@ import { useAuth } from '../../context/AuthContext';
 import styles from './buttonActionHome.styles';
 
 type ButtonActionHomeProps = {
-  title: string;
+  modalVisible: boolean;
 };
 
 type AppNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
-export default function ButtonActionHome() {
+export default function ButtonActionHome({ modalVisible }: ButtonActionHomeProps) {
   const navigation = useNavigation<AppNavigationProp>();
   const { userRole } = useAuth();
 
   const title = userRole === 'mecanico' ? 'Dashboard' : 'Solicitar servicio';
 
   const handlePress = () => {
-    if (userRole == 'mecanico') {
+    if (userRole === 'mecanico') {
       navigation.navigate('MechanicDashboard');
     } else {
       // Para clientes, ir a la pantalla de servicios
       navigation.navigate('Services');
     }
   };
+
+  if (!modalVisible) return null;
 
   return (
     <TouchableOpacity style={styles.button} onPress={handlePress}>

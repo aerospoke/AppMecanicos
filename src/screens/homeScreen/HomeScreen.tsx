@@ -27,18 +27,18 @@ const HomeScreen: React.FC = () => {
   return (
     <SafeAreaView style={{ flex: 1, paddingBottom: 16 }}>
       <View style={{ padding: 16 }}>
+        <ModalStateService
+          visible={modalVisible}
+          status={serviceRequest?.status}
+          onClose={() => setModalVisible(false)}
+        />
+        <ButtonActionHome modalVisible={modalVisible}/>
         <Text style={{ fontSize: 24, fontWeight: 'bold', marginBottom: 8 }}>
           Bienvenido, {user?.user_metadata?.nombre || 'Usuario'}
         </Text>
       </View>
-      <PrincipalMap/>
-      <ButtonActionHome/>
-      <ButtonProfile/>
-      <ModalStateService
-        visible={modalVisible}
-        status={serviceRequest?.status}
-        onClose={() => setModalVisible(false)}
-      />
+      <PrincipalMap />
+      <ButtonProfile />
     </SafeAreaView>
   );
 };

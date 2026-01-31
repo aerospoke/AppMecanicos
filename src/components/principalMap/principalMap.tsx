@@ -19,7 +19,7 @@ type PrincipalMapProps = {
 };
 
 export default function PrincipalMap({
-  height = '70%',
+  height = '80%',
   initialRegion,
   markers,
   autoMoveOnLocation = true,
