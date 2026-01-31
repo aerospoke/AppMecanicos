@@ -13,10 +13,8 @@ const statusToStep = (status: string | undefined): number => {
             return 3;
         case "completed":
             return 4;
-        case "cancelled":
+        case "completed":
             return 5;
-        case "rejected":
-            return 1;
         default:
             return 1;
     }
@@ -37,7 +35,7 @@ export default function ModalStateService({ visible, status, onClose }: ModalSta
         { id: 2, title: "Mecánico Asignado", description: "Un mecánico ha aceptado tu servicio", icon: "search" as const },
         { id: 3, title: "En Progreso", description: "El mecánico ha notificado que está trabajando en el problema", icon: "person" as const },
         { id: 4, title: "En Camino", description: "El mecánico se dirige hacia tu ubicación", icon: "directions-car" as const },
-        { id: 5, title: "Servicio Cancelado", description: "El servicio ha sido cancelado", icon: "cancel" as const },
+        { id: 5, title: "Completado", description: "El servicio ha sido completado", icon: "check-circle" as const },
     ];
 
     const currentStepData = steps.find(step => step.id === currentStep);
@@ -69,7 +67,7 @@ export default function ModalStateService({ visible, status, onClose }: ModalSta
                                     {step.id}
                                 </Text>
                             </View>
-                            {step.id < 4 && (
+                            {step.id < steps.length && (
                                 <View style={[
                                     styles.stepLine,
                                     step.id < currentStep ? styles.stepLineActive : styles.stepLineInactive
