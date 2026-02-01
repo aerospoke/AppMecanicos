@@ -35,7 +35,6 @@ export default function ModalStateService({ visible, status,serviceRequest, onCl
         { id: 1, title: "Solicitud Creada", description: "Notificando a mecánicos cercanos", icon: "check-circle" as const },
         { id: 2, title: "Mecánico Asignado", description: "Un mecánico ha aceptado tu servicio", icon: "search" as const },
         { id: 3, title: "En Progreso", description: "El mecánico trabaja en el caso", icon: "person" as const },
-        { id: 4, title: "Completado", description: "El servicio ha sido completado", icon: "check-circle" as const },
     ];
 
     const currentStepData = steps.find(step => step.id === currentStep);
