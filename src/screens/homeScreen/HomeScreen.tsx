@@ -11,7 +11,7 @@ import React from 'react';
 
 const HomeScreen: React.FC = () => {
   const { userRole, user } = useAuth();
-  const serviceRequest = useServiceRequestListener();
+  const serviceRequest = userRole === "usuario" ? useServiceRequestListener() : null;
   const [modalVisible, setModalVisible] = React.useState(false);
 
   // Mostrar el modal cuando haya una solicitud activa

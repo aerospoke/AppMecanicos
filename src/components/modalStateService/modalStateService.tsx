@@ -2,9 +2,12 @@ import { TouchableOpacity, Text, View, Modal, Alert } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import styles from "./modalStateService.styles";
 import { updateServiceRequestStatus } from "../../services/supabaseService";
+import { useAuth } from "../../context/AuthContext";
 
 // Mapea el status de la base de datos a un paso del modal
 const statusToStep = (status: string | undefined): number => {
+   
+    
     switch (status) {
         case "pending":
             return 1;
@@ -14,7 +17,6 @@ const statusToStep = (status: string | undefined): number => {
             return 3;
         case "completed":
             return 4;
-       
         default:
             return 1;
     }
@@ -28,15 +30,27 @@ type ModalStateServiceProps = {
 };
 
 export default function ModalStateService({ visible, status,serviceRequest, onClose }: ModalStateServiceProps) {
+    const { userRole, user } = useAuth();
+    console.log("🚀 ~ statusToStep ~ userRole:", userRole)
     // Determina el paso actual según el status
     const currentStep = statusToStep(status);
-
-    const steps = [
+    
+    const stepsUser = [
         { id: 1, title: "Solicitud Creada", description: "Notificando a mecánicos cercanos", icon: "check-circle" as const },
         { id: 2, title: "Mecánico Asignado", description: "Un mecánico ha aceptado tu servicio", icon: "search" as const },
         { id: 3, title: "En Progreso", description: "El mecánico trabaja en el caso", icon: "person" as const },
     ];
+    
+    
+    const stepMechanic = [
+        { id: 1, title: "Servicio Aceptado", description: "Confirmar asistencia", icon: "done-all" as const },
+        { id: 2, title: "Llegada Confirmada", description: "Confirmar llegada al lugar", icon: "done-all" as const },
+        { id: 3, title: "Servicio Completado", description: "Confirmar servicio completado", icon: "done-all" as const },
+        
+    ]
 
+    const steps = userRole === 'mecanico' ? stepMechanic : stepsUser;
+    
     const currentStepData = steps.find(step => step.id === currentStep);
 
     const handleCancelService = async () => {
