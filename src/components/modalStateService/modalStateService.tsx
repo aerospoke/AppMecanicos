@@ -78,12 +78,11 @@ export default function ModalStateService({ visible, status,serviceRequest, onCl
     };
 
     return (
-        <Modal
-            visible={visible}
-            animationType="slide"
-            transparent
-            // Evita que el botón de volver cierre el modal
-            onRequestClose={() => {}}
+        <View 
+            style={[
+                styles.modalOverlay, 
+                { display: visible ? 'flex' : 'none' }
+            ]}
         >
             <View style={styles.container}>
                 <View style={styles.header}>
@@ -147,6 +146,6 @@ export default function ModalStateService({ visible, status,serviceRequest, onCl
                     )}
                 </View>
             </View>
-        </Modal>
+        </View>
     );
 }
