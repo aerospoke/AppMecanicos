@@ -17,7 +17,7 @@ const HomeScreen: React.FC = () => {
   // Mostrar el modal cuando haya una solicitud activa
   React.useEffect(() => {
     console.log("🚀 ~ HomeScreen ~ serviceRequest.status:", serviceRequest?.status)
-    if (serviceRequest && serviceRequest.status) {
+    if (serviceRequest && serviceRequest.status!== 'completed' && serviceRequest.status !== 'cancelled') {
       setModalVisible(true);
     } else {
       setModalVisible(false);
@@ -25,20 +25,20 @@ const HomeScreen: React.FC = () => {
   }, [serviceRequest]);
 
   return (
-    <SafeAreaView style={{ flex: 1, paddingBottom: 16 }}>
+    <SafeAreaView style={{ flex: 1, }}>
       <View style={{ padding: 16 }}>
-        <ModalStateService
-          visible={modalVisible}
-          status={serviceRequest?.status}
-          onClose={() => setModalVisible(false)}
-        />
-        <ButtonActionHome modalVisible={modalVisible}/>
         <Text style={{ fontSize: 24, fontWeight: 'bold', marginBottom: 8 }}>
           Bienvenido, {user?.user_metadata?.nombre || 'Usuario'}
         </Text>
       </View>
-      <PrincipalMap />
-      <ButtonProfile />
+      <PrincipalMap modalVisible={modalVisible}/>
+      {!modalVisible && <ButtonActionHome modalVisible={modalVisible} />}
+        <ModalStateService
+          visible={modalVisible}
+          status={serviceRequest?.status}
+          serviceRequest={serviceRequest}
+          onClose={() => setModalVisible(false)}
+        />
     </SafeAreaView>
   );
 };

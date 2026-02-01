@@ -332,6 +332,36 @@ export const createServiceRequest = async (serviceData: {
   }
 };
 
+/**
+ * Actualizar el estado de una solicitud de servicio
+ * Tabla: service_requests
+ */
+export const updateServiceRequestStatus = async (
+  serviceId: string,
+  status: 'pending' | 'accepted' | 'in_progress' | 'completed' | 'cancelled'
+) => {
+  try {
+    if (!serviceId) {
+      throw new Error('ID del servicio es requerido');
+    }
+
+    const { data, error } = await supabase
+      .from('service_requests')
+      .update({ 
+        status,
+      })
+      .eq('id', serviceId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return { data, error: null };
+  } catch (error) {
+    console.error('Error al actualizar estado del servicio:', error);
+    return { data: null, error: error as PostgrestError };
+  }
+};
+
 // ========== STORAGE (Archivos) ==========
 
 /**
@@ -434,6 +464,7 @@ export default {
   
   // Service Requests
   createServiceRequest,
+  updateServiceRequestStatus,
   
   // Storage
   uploadFile,

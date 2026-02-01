@@ -1,6 +1,7 @@
-import { TouchableOpacity, Text, View, Modal } from "react-native";
+import { TouchableOpacity, Text, View, Modal, Alert } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import styles from "./modalStateService.styles";
+import { updateServiceRequestStatus } from "../../services/supabaseService";
 
 // Mapea el status de la base de datos a un paso del modal
 const statusToStep = (status: string | undefined): number => {
@@ -22,10 +23,11 @@ const statusToStep = (status: string | undefined): number => {
 type ModalStateServiceProps = {
     visible: boolean;
     status?: string;
+    serviceRequest?: any;
     onClose: () => void;
 };
 
-export default function ModalStateService({ visible, status, onClose }: ModalStateServiceProps) {
+export default function ModalStateService({ visible, status,serviceRequest, onClose }: ModalStateServiceProps) {
     // Determina el paso actual según el status
     const currentStep = statusToStep(status);
 
@@ -37,6 +39,43 @@ export default function ModalStateService({ visible, status, onClose }: ModalSta
     ];
 
     const currentStepData = steps.find(step => step.id === currentStep);
+
+    const handleCancelService = async () => {
+        if (!serviceRequest?.id) {
+            Alert.alert('Error', 'No se encontró el ID del servicio.');
+            return;
+        }
+
+        Alert.alert(
+            'Cancelar Servicio',
+            '¿Estás seguro de que deseas cancelar este servicio?' + '\n' +'\n' +
+            'Se cobrará una tarifa de cancelación si el mecánico ya está en camino.',
+            [
+                { text: 'No', style: 'cancel' },
+                {
+                    text: 'Sí, cancelar',
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            const { data, error } = await updateServiceRequestStatus(serviceRequest.id, 'cancelled');
+
+                            if (error) {
+                                console.error('Error cancelando servicio:', error);
+                                Alert.alert('Error', 'No se pudo cancelar el servicio');
+                                return;
+                            }
+
+                            onClose() 
+                            
+                        } catch (error) {
+                            console.error('Error en handleCancelService:', error);
+                            Alert.alert('Error', 'Ocurrió un error al cancelar el servicio');
+                        }
+                    },
+                },
+            ]
+        );
+    };
 
     return (
         <Modal
@@ -89,16 +128,24 @@ export default function ModalStateService({ visible, status, onClose }: ModalSta
                         <Text style={styles.stepDescription}>{currentStepData?.description}</Text>
                     </View>
                 </View>
-                 {/* Botón de cerrar */}
-
-
-                {currentStepData.id === 4 &&
+                 
+                {/* Botones de acción */}
                 <View style={styles.buttonContainer}>
-                    <TouchableOpacity style={styles.button} onPress={onClose}>
-                        <Text style={styles.buttonText}>Cerrar</Text>
-                    </TouchableOpacity>
+                    {currentStepData?.id === 4 ? (
+                        // Botón de cerrar cuando el servicio está completado
+                        <TouchableOpacity style={styles.button} onPress={onClose}>
+                            <Text style={styles.buttonText}>Cerrar</Text>
+                        </TouchableOpacity>
+                    ) : (
+                        // Botón de cancelar cuando el servicio está en progreso
+                        <TouchableOpacity 
+                            style={[styles.button, styles.buttonCancel]} 
+                            onPress={handleCancelService}
+                        >
+                            <Text style={styles.buttonText}>Cancelar Servicio</Text>
+                        </TouchableOpacity>
+                    )}
                 </View>
-                 }
             </View>
         </Modal>
     );

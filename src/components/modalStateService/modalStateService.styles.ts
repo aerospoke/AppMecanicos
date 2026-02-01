@@ -85,19 +85,23 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   buttonContainer: {
+    paddingTop: 15,
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
   },
   button: {
     backgroundColor: '#306bd3',
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
-    minWidth: 100,
+    width: "100%",
     alignItems: 'center',
   },
   buttonDisabled: {
     backgroundColor: '#e5e7eb',
+  },
+  buttonCancel: {
+    backgroundColor: '#dc2626',
   },
   buttonText: {
     color: '#ffffff',
