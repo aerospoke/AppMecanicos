@@ -132,13 +132,9 @@ export default function ServicesScreen() {
 					'Hay un nuevo servicio disponible',
 					{ serviceId: data.id, type: selectedService.type }
 				);
-
-				Alert.alert('¡Solicitud Creada!', 'Un mecánico cercano será notificado', [
-					{ text: 'OK', onPress: () => {
-						handleBackToList();
-						navigation.goBack();
-					}}
-				]);
+				handleBackToList();
+				navigation.goBack();
+				
 			} catch (e) {
 				console.error('Error creando servicio desde ServicesScreen:', e);
 				Alert.alert('Error', 'Ocurrió un error al crear la solicitud');

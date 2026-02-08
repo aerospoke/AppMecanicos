@@ -16,17 +16,22 @@ type PrincipalMapProps = {
   markers?: MarkerItem[];
   autoMoveOnLocation?: boolean;
   showUserLocationDot?: boolean;
+  modalVisible?: boolean;
 };
 
 export default function PrincipalMap({
-  height = '70%',
+  height,
   initialRegion,
   markers,
   autoMoveOnLocation = true,
   showUserLocationDot = true,
+  modalVisible,
 }: PrincipalMapProps) {
   const { location } = useLocationContext();
   const mapRef = useRef<MapView | null>(null);
+
+  // Calcular la altura basada en si el modal está visible
+  const mapHeight = height || (modalVisible ? '100%' : '82%');
 
   const resolvedRegion: Region = useMemo(() => {
     const baseLat = location?.latitude ?? -34.6037;
@@ -59,9 +64,9 @@ export default function PrincipalMap({
       longitudeDelta: resolvedRegion.longitudeDelta ?? 0.05,
     };
     mapRef.current.animateToRegion(nextRegion, 600);
-  }, [location, autoMoveOnLocation]);
+  }, [location, autoMoveOnLocation, modalVisible]);
   return (
-    <View style={[styles.container, { height }]}> 
+    <View style={[styles.container, { height: mapHeight }]}>
       <MapView
         ref={mapRef}
         provider={PROVIDER_GOOGLE}
