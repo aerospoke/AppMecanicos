@@ -10,13 +10,14 @@ type MarkerItem = {
   description?: string;
 };
 
-type PrincipalMapProps = {
+export type PrincipalMapProps = {
   height?: DimensionValue;
   initialRegion?: Region;
   markers?: MarkerItem[];
   autoMoveOnLocation?: boolean;
   showUserLocationDot?: boolean;
   modalVisible?: boolean;
+  selectedService?: any; // Add correct type if known
 };
 
 export default function PrincipalMap({
@@ -26,12 +27,15 @@ export default function PrincipalMap({
   autoMoveOnLocation = true,
   showUserLocationDot = true,
   modalVisible,
+  selectedService,
 }: PrincipalMapProps) {
+  console.log("🚀 ~ PrincipalMap ~ selectedService:", selectedService)
+  
   const { location } = useLocationContext();
   const mapRef = useRef<MapView | null>(null);
 
   // Calcular la altura basada en si el modal está visible
-  const mapHeight = height || (modalVisible ? '100%' : '82%');
+  const mapHeight = height || ( '82%');
 
   const resolvedRegion: Region = useMemo(() => {
     const baseLat = location?.latitude ?? -34.6037;
@@ -46,25 +50,60 @@ export default function PrincipalMap({
   }, [initialRegion, location]);
 
   const resolvedMarkers: { latitude: number; longitude: number; title?: string; description?: string }[] = useMemo(() => {
-    if (markers && markers.length > 0) return markers;
-    const baseLat = location?.latitude ?? -34.6037;
-    const baseLng = location?.longitude ?? -58.3816;
-    return [{ latitude: baseLat, longitude: baseLng, title: 'Tu ubicación', description: 'Ubicación actual' }];
-  }, [markers, location]);
+    let baseMarkers: { latitude: number; longitude: number; title?: string; description?: string }[] = [];
+    if (markers && markers.length > 0) {
+      baseMarkers = markers;
+    } else {
+      const baseLat = location?.latitude ?? -34.6037;
+      const baseLng = location?.longitude ?? -58.3816;
+      baseMarkers = [{ latitude: baseLat, longitude: baseLng, title: 'Tu ubicación', description: 'Ubicación actual' }];
+    }
+    // Si hay un servicio seleccionado con coordenadas, agregarlo como marcador especial
+    if (selectedService && selectedService.latitude && selectedService.longitude) {
+      baseMarkers = [
+        ...baseMarkers,
+        {
+          latitude: selectedService.latitude,
+          longitude: selectedService.longitude,
+          title: selectedService.service_name || 'Servicio solicitado',
+          description: selectedService.service_description || 'Ubicación del servicio',
+        },
+      ];
+    }
+    return baseMarkers;
+  }, [markers, location, selectedService]);
 
-  // Animar el mapa hacia la ubicación del usuario cuando esté disponible
+  // Enfocar el mapa para mostrar tanto la ubicación del usuario como la del servicio seleccionado
   useEffect(() => {
     if (!mapRef.current) return;
-    if (!location) return;
     if (!autoMoveOnLocation) return;
-    const nextRegion: Region = {
-      latitude: location.latitude,
-      longitude: location.longitude,
-      latitudeDelta: resolvedRegion.latitudeDelta ?? 0.05,
-      longitudeDelta: resolvedRegion.longitudeDelta ?? 0.05,
-    };
-    mapRef.current.animateToRegion(nextRegion, 600);
-  }, [location, autoMoveOnLocation, modalVisible]);
+    // Si hay selectedService con coordenadas y ubicación del usuario, enfocar ambos SIEMPRE
+    if (
+      selectedService &&
+      selectedService.latitude &&
+      selectedService.longitude &&
+      location &&
+      location.latitude &&
+      location.longitude
+    ) {
+      mapRef.current.fitToCoordinates([
+        { latitude: location.latitude, longitude: location.longitude },
+        { latitude: selectedService.latitude, longitude: selectedService.longitude },
+      ], {
+        edgePadding: { top: 120, right: 120, bottom: 120, left: 120 },
+        animated: true,
+      });
+    } else if (location) {
+      // Si solo hay ubicación del usuario, centrar en ella
+      const nextRegion: Region = {
+        latitude: location.latitude,
+        longitude: location.longitude,
+        latitudeDelta: resolvedRegion.latitudeDelta ?? 0.05,
+        longitudeDelta: resolvedRegion.longitudeDelta ?? 0.05,
+      };
+      mapRef.current.animateToRegion(nextRegion, 600);
+    }
+  }, [location, autoMoveOnLocation, modalVisible, selectedService, resolvedRegion.latitudeDelta, resolvedRegion.longitudeDelta]);
   return (
     <View style={[styles.container, { height: mapHeight }]}>
       <MapView

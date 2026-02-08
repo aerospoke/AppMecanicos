@@ -89,67 +89,8 @@ export default function ModalStateService({ visible, status,serviceRequest, onCl
             ]}
         >
             <View style={styles.container}>
-                <View style={styles.header}>
-                    <Text style={styles.title}>Estado del Servicio</Text>
-                </View>
-
-                {/* Indicador de Pasos */}
-                <View style={styles.stepIndicator}>
-                    {stepMechanic.map((step) => (
-                        <View key={step.id} style={styles.stepContainer}>
-                            <View style={[
-                                styles.stepCircle,
-                                step.id <= currentStep ? styles.stepActive : styles.stepInactive
-                            ]}>
-                                <Text style={[
-                                    styles.stepNumber,
-                                    step.id <= currentStep ? styles.stepNumberActive : styles.stepNumberInactive
-                                ]}>
-                                    {step.id}
-                                </Text>
-                            </View>
-                            {step.id < stepMechanic.length && (
-                                <View style={[
-                                    styles.stepLine,
-                                    step.id < currentStep ? styles.stepLineActive : styles.stepLineInactive
-                                ]} />
-                            )}
-                        </View>
-                    ))}
-                </View>
-
-                {/* Contenido del Paso Actual */}
-                <View style={styles.stepContent}>
-                    <MaterialIcons
-                     style={styles.stepIcon}
-                        name={currentStepData?.icon}
-                        size={64}
-                        color={currentStep <= currentStep ? "#306bd3" : "#9ca3af"}
-                    />
-                    <View style={styles.stepDescriptionContainer}>
-                        <Text style={styles.stepTitle}>{currentStepData?.title}</Text>
-                        <Text style={styles.stepDescription}>{currentStepData?.description}</Text>
-                    </View>
-                </View>
-                 
-                {/* Botones de acción */}
-                <View style={styles.buttonContainer}>
-                    {currentStepData?.id === 4 ? (
-                        // Botón de cerrar cuando el servicio está completado
-                        <TouchableOpacity style={styles.button} onPress={onClose}>
-                            <Text style={styles.buttonText}>Cerrar</Text>
-                        </TouchableOpacity>
-                    ) : (
-                        // Botón de cancelar cuando el servicio está en progreso
-                        <TouchableOpacity 
-                            style={[styles.button, styles.buttonCancel]} 
-                            onPress={handleCancelService}
-                        >
-                            <Text style={styles.buttonText}>Cancelar Servicio</Text>
-                        </TouchableOpacity>
-                    )}
-                </View>
             </View>
+             
         </View>
     );
 }
