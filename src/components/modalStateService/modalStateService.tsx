@@ -31,7 +31,6 @@ type ModalStateServiceProps = {
 
 export default function ModalStateService({ visible, status,serviceRequest, onClose }: ModalStateServiceProps) {
     const { userRole, user } = useAuth();
-    console.log("🚀 ~ statusToStep ~ userRole:", userRole)
     // Determina el paso actual según el status
     const currentStep = statusToStep(status);
     

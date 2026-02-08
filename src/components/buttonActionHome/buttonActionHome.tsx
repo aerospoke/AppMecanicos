@@ -15,13 +15,11 @@ type ButtonActionHomeProps = {
 type AppNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 export default function ButtonActionHome({ modalVisible }: ButtonActionHomeProps) {
-  console.log("🚀 ~ ButtonActionHome ~ modalVisible:", modalVisible)
   const navigation = useNavigation<AppNavigationProp>();
   const { userRole } = useAuth();
 
   const cancellServiceRequest = () => {
     // Lógica para cancelar la solicitud de servicio
-    console.log("🚀 ~ cancellServiceRequest ~ Solicitud de servicio cancelada");
   }
 
   let title = userRole === 'mecanico' ? 'Dashboard' : 'Solicitar servicio';
@@ -45,7 +43,6 @@ export default function ButtonActionHome({ modalVisible }: ButtonActionHomeProps
     } 
     
     
-    console.log("🚀 ~ handlePress ~ userRole:", userRole)
     if (userRole === 'usuario') {
       navigation.navigate('Services');
 

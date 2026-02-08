@@ -16,8 +16,6 @@ const HomeScreen: React.FC = () => {
 
   // Mostrar el modal cuando haya una solicitud activa
   React.useEffect(() => {
-    console.log("🚀 ~ HomeScreen ~ serviceRequest.status:", serviceRequest?.status)
-
     
     if (serviceRequest && serviceRequest.status!== 'completed' && serviceRequest.status !== 'cancelled') {
       setModalVisible(true);
