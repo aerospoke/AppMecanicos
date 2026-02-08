@@ -34,13 +34,15 @@ export default function ModalStateService({ visible, status,serviceRequest, onCl
     // Determina el paso actual según el status
     const currentStep = statusToStep(status);
     
-    const steps = [
-        { id: 1, title: "Solicitud Creada", description: "Notificando a mecánicos cercanos", icon: "check-circle" as const },
-        { id: 2, title: "Mecánico Asignado", description: "Un mecánico ha aceptado tu servicio", icon: "search" as const },
-        { id: 3, title: "En Progreso", description: "El mecánico trabaja en el caso", icon: "person" as const },
-    ];
+    const stepMechanic = [
+        { id: 1, title: "Servicio Aceptado", description: "Confirmar asistencia", icon: "done-all" as const },
+        { id: 2, title: "Llegada Confirmada", description: "Confirmar llegada al lugar", icon: "done-all" as const },
+        { id: 3, title: "Servicio Completado", description: "Confirmar servicio completado", icon: "done-all" as const },
+        
+    ]
 
-    const currentStepData = steps.find(step => step.id === currentStep);
+    
+    const currentStepData = stepMechanic.find(step => step.id === currentStep);
 
     const handleCancelService = async () => {
         if (!serviceRequest?.id) {
@@ -51,7 +53,7 @@ export default function ModalStateService({ visible, status,serviceRequest, onCl
         Alert.alert(
             'Cancelar Servicio',
             '¿Estás seguro de que deseas cancelar este servicio?' + '\n' +'\n' +
-            'Se cobrará una tarifa de cancelación si el mecánico ya está en camino.',
+            'Esto afectará tu reputación y posibilidad de recibir futuros nuevos servicios.',
             [
                 { text: 'No', style: 'cancel' },
                 {
@@ -93,7 +95,7 @@ export default function ModalStateService({ visible, status,serviceRequest, onCl
 
                 {/* Indicador de Pasos */}
                 <View style={styles.stepIndicator}>
-                    {steps.map((step) => (
+                    {stepMechanic.map((step) => (
                         <View key={step.id} style={styles.stepContainer}>
                             <View style={[
                                 styles.stepCircle,
@@ -106,7 +108,7 @@ export default function ModalStateService({ visible, status,serviceRequest, onCl
                                     {step.id}
                                 </Text>
                             </View>
-                            {step.id < steps.length && (
+                            {step.id < stepMechanic.length && (
                                 <View style={[
                                     styles.stepLine,
                                     step.id < currentStep ? styles.stepLineActive : styles.stepLineInactive

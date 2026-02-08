@@ -8,6 +8,7 @@ import PrincipalMap from '../../components/principalMap/principalMap';
 import ModalStateService from '../../components/modalStateService/modalStateService';
 import { useServiceRequestListener } from '../../services/useServiceRequestListener';
 import React from 'react';
+import ModalStateServiceMechanic from '../../components/modalStateService/modalStateServiceMechanic';
 
 const HomeScreen: React.FC = () => {
   const { userRole, user } = useAuth();
@@ -16,8 +17,8 @@ const HomeScreen: React.FC = () => {
 
   // Mostrar el modal cuando haya una solicitud activa
   React.useEffect(() => {
-    
-    if (serviceRequest && serviceRequest.status!== 'completed' && serviceRequest.status !== 'cancelled') {
+
+    if (serviceRequest && serviceRequest.status !== 'completed' && serviceRequest.status !== 'cancelled') {
       setModalVisible(true);
     } else {
       setModalVisible(false);
@@ -31,14 +32,28 @@ const HomeScreen: React.FC = () => {
           Bienvenido, {user?.user_metadata?.nombre || 'Usuario'}
         </Text>
       </View>
-      <PrincipalMap modalVisible={modalVisible}/>
+      <PrincipalMap modalVisible={modalVisible} />
+
       {!modalVisible && <ButtonActionHome modalVisible={modalVisible} />}
+
+      {userRole === 'usuario' &&
         <ModalStateService
           visible={modalVisible}
           status={serviceRequest?.status}
           serviceRequest={serviceRequest}
           onClose={() => setModalVisible(false)}
         />
+      }
+
+      {userRole === 'mecanico' &&
+        <ModalStateServiceMechanic
+          visible={modalVisible}
+          status={serviceRequest?.status}
+          serviceRequest={serviceRequest}
+          onClose={() => setModalVisible(false)}
+        />
+      }
+
     </SafeAreaView>
   );
 };
