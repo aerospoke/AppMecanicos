@@ -1,5 +1,6 @@
 import { TouchableOpacity, Text, View, Modal, Alert } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
+import { useLocationContext } from '../../context/LocationContext';
 import styles from "./modalStateService.styles";
 import { updateServiceRequestStatus } from "../../services/supabaseService";
 import { useAuth } from "../../context/AuthContext";
@@ -29,20 +30,56 @@ type ModalStateServiceProps = {
     onClose: () => void;
 };
 
-export default function ModalStateService({ visible, status,serviceRequest, onClose }: ModalStateServiceProps) {
+const ModalStateServiceMechanic = ({
+    visible,
+    status,
+    serviceRequest,
+    onClose,
+}: ModalStateServiceProps) => {
+
     const { userRole, user } = useAuth();
+    const { location } = useLocationContext();
     // Determina el paso actual según el status
     const currentStep = statusToStep(status);
-    
+
     const stepMechanic = [
         { id: 1, title: "Servicio Aceptado", description: "Confirmar asistencia", icon: "done-all" as const },
         { id: 2, title: "Llegada Confirmada", description: "Confirmar llegada al lugar", icon: "done-all" as const },
         { id: 3, title: "Servicio Completado", description: "Confirmar servicio completado", icon: "done-all" as const },
-        
-    ]
+    ];
 
-    
-    const currentStepData = stepMechanic.find(step => step.id === currentStep);
+    // Calcular distancia en km entre el mecánico y el servicio
+    function getDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number) {
+        const R = 6371; // km
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a =
+            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
+    }
+
+    let distanciaKm: string | null = null;
+    let tiempoMin: string | null = null;
+    if (
+        location &&
+        serviceRequest &&
+        serviceRequest.latitude &&
+        serviceRequest.longitude
+    ) {
+        const dist = getDistanceKm(
+            location.latitude,
+            location.longitude,
+            serviceRequest.latitude,
+            serviceRequest.longitude
+        );
+        distanciaKm = dist.toFixed(2);
+        // Suponiendo velocidad promedio urbana de 30 km/h
+        const tiempo = dist / 30 * 60; // minutos
+        tiempoMin = tiempo < 1 ? '<1' : tiempo.toFixed(0);
+    }
 
     const handleCancelService = async () => {
         if (!serviceRequest?.id) {
@@ -89,8 +126,22 @@ export default function ModalStateService({ visible, status,serviceRequest, onCl
             ]}
         >
             <View style={styles.container}>
+                {/* Info distancia y tiempo */}
+                {distanciaKm && tiempoMin && (
+                    <View style={{ marginBottom: 16, alignItems: 'center' }}>
+                        <Text style={{ fontWeight: 'bold', color: '#2563eb', fontSize: 16 }}>
+                            Distancia al servicio: {distanciaKm} km
+                        </Text>
+                        <Text style={{ color: '#2563eb', fontSize: 15 }}>
+                            Tiempo estimado de llegada: {tiempoMin} min
+                        </Text>
+                    </View>
+                )}
+                {/* ...existing code... */}
             </View>
              
         </View>
     );
-}
+};
+
+export default ModalStateServiceMechanic;
