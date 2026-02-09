@@ -7,19 +7,18 @@ import { useAuth } from "../../context/AuthContext";
 
 // Mapea el status de la base de datos a un paso del modal
 const statusToStep = (status: string | undefined): number => {
-   
-    
+
     switch (status) {
         case "pending":
-            return 1;
+            return 0;
         case "accepted":
-            return 2;
-        case "in_progress":
-            return 3;
-        case "completed":
-            return 4;
-        default:
             return 1;
+        case "in_progress":
+            return 2;
+        case "completed":
+            return 3;
+        default:
+            return 0;
     }
 };
 
@@ -36,17 +35,42 @@ const ModalStateServiceMechanic = ({
     serviceRequest,
     onClose,
 }: ModalStateServiceProps) => {
+    console.log("🚀 ~ ModalStateServiceMechanic ~ serviceRequest:", serviceRequest)
+    console.log("🚀 ~ ModalStateServiceMechanic ~ status:", status)
 
     const { userRole, user } = useAuth();
     const { location } = useLocationContext();
-    // Determina el paso actual según el status
     const currentStep = statusToStep(status);
 
     const stepMechanic = [
+        { id: 0, title: "Aceptar Servicio", description: "Esperando aceptación de un mecánico", icon: "hourglass-empty" as const },
         { id: 1, title: "Servicio Aceptado", description: "Confirmar asistencia", icon: "done-all" as const },
         { id: 2, title: "Llegada Confirmada", description: "Confirmar llegada al lugar", icon: "done-all" as const },
         { id: 3, title: "Servicio Completado", description: "Confirmar servicio completado", icon: "done-all" as const },
     ];
+
+    const currentStepData = stepMechanic.find(step => step.id === currentStep);
+
+    const acceptService = async () => {
+        if (!serviceRequest?.id) {
+            Alert.alert('Error', 'No se encontró el ID del servicio.');
+            return;
+        }
+
+        try {
+            const { data, error } = await updateServiceRequestStatus(serviceRequest.id, 'accepted');
+
+            if (error) {
+                console.error('Error aceptando servicio:', error);
+                Alert.alert('Error', 'No se pudo aceptar el servicio');
+                return;
+            }
+
+        } catch (error) {
+            console.error('Error en acceptService:', error);
+            Alert.alert('Error', 'Ocurrió un error al aceptar el servicio');
+        }
+    }
 
     // Calcular distancia en km entre el mecánico y el servicio
     function getDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number) {
@@ -89,7 +113,7 @@ const ModalStateServiceMechanic = ({
 
         Alert.alert(
             'Cancelar Servicio',
-            '¿Estás seguro de que deseas cancelar este servicio?' + '\n' +'\n' +
+            '¿Estás seguro de que deseas cancelar este servicio?' + '\n' + '\n' +
             'Esto afectará tu reputación y posibilidad de recibir futuros nuevos servicios.',
             [
                 { text: 'No', style: 'cancel' },
@@ -106,8 +130,8 @@ const ModalStateServiceMechanic = ({
                                 return;
                             }
 
-                            onClose() 
-                            
+                            onClose()
+
                         } catch (error) {
                             console.error('Error en handleCancelService:', error);
                             Alert.alert('Error', 'Ocurrió un error al cancelar el servicio');
@@ -119,9 +143,9 @@ const ModalStateServiceMechanic = ({
     };
 
     return (
-        <View 
+        <View
             style={[
-                styles.modalOverlay, 
+                styles.modalOverlay,
                 { display: visible ? 'flex' : 'none' }
             ]}
         >
@@ -137,9 +161,15 @@ const ModalStateServiceMechanic = ({
                         </Text>
                     </View>
                 )}
-                {/* ...existing code... */}
+                <View style={styles.buttonContainer}>
+                    {currentStepData?.id === 0 && (
+                        <TouchableOpacity style={styles.button} onPress={acceptService}>
+                            <Text style={styles.buttonText}>Aceptar Servicio</Text>
+                        </TouchableOpacity>
+                    )}
+                </View>
             </View>
-             
+
         </View>
     );
 };
