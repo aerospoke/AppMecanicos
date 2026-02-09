@@ -51,6 +51,7 @@ const HomeScreen: React.FC = () => {
       <PrincipalMap 
         modalVisible={modalVisible} 
         selectedService={selectedService}
+        fitToBothMarkers={!!selectedService}
       />
 
       {!modalVisible && <ButtonActionHome modalVisible={modalVisible} />}

@@ -18,6 +18,7 @@ export type PrincipalMapProps = {
   showUserLocationDot?: boolean;
   modalVisible?: boolean;
   selectedService?: any; // Add correct type if known
+  fitToBothMarkers?: boolean;
 };
 
 export default function PrincipalMap({
@@ -28,6 +29,7 @@ export default function PrincipalMap({
   showUserLocationDot = true,
   modalVisible,
   selectedService,
+  fitToBothMarkers = false,
 }: PrincipalMapProps) {
   console.log("🚀 ~ PrincipalMap ~ selectedService:", selectedService)
   
@@ -77,8 +79,9 @@ export default function PrincipalMap({
   useEffect(() => {
     if (!mapRef.current) return;
     if (!autoMoveOnLocation) return;
-    // Si hay selectedService con coordenadas y ubicación del usuario, enfocar ambos SIEMPRE
+    // Si hay selectedService y fitToBothMarkers, enfocar ambos SIEMPRE
     if (
+      fitToBothMarkers &&
       selectedService &&
       selectedService.latitude &&
       selectedService.longitude &&
@@ -86,13 +89,17 @@ export default function PrincipalMap({
       location.latitude &&
       location.longitude
     ) {
-      mapRef.current.fitToCoordinates([
-        { latitude: location.latitude, longitude: location.longitude },
-        { latitude: selectedService.latitude, longitude: selectedService.longitude },
-      ], {
-        edgePadding: { top: 120, right: 120, bottom: 120, left: 120 },
-        animated: true,
-      });
+      // Esperar un pequeño delay para asegurar que el mapa esté montado
+      setTimeout(() => {
+        if (!mapRef.current) return;
+        mapRef.current.fitToCoordinates([
+          { latitude: location.latitude, longitude: location.longitude },
+          { latitude: selectedService.latitude, longitude: selectedService.longitude },
+        ], {
+          edgePadding: { top: 140, right: 140, bottom: 140, left: 140 },
+          animated: true,
+        });
+      }, 300);
     } else if (location) {
       // Si solo hay ubicación del usuario, centrar en ella
       const nextRegion: Region = {
@@ -103,7 +110,7 @@ export default function PrincipalMap({
       };
       mapRef.current.animateToRegion(nextRegion, 600);
     }
-  }, [location, autoMoveOnLocation, modalVisible, selectedService, resolvedRegion.latitudeDelta, resolvedRegion.longitudeDelta]);
+  }, [location, autoMoveOnLocation, modalVisible, selectedService, fitToBothMarkers, resolvedRegion.latitudeDelta, resolvedRegion.longitudeDelta]);
   return (
     <View style={[styles.container, { height: mapHeight }]}>
       <MapView
